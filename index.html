@@ -1,0 +1,1163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MPE calculator</title>
+<meta name="description" content="Maximum permissible exposure, hazard distance and required attenuation for show lasers and high-power moving lights.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23151517'/%3E%3Cpath d='M5 16h9M18 9l9-4M18 16h9M18 23l9 4' stroke='%23ef4b55' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0c0c0e;
+  --surface-1: #151517;
+  --surface-2: #1c1c1f;
+  --surface-3: #252529;
+  --border: #2a2a2f;
+  --grid: #26262a;
+  --text-primary: #f3f3f4;
+  --text-secondary: #b3b3ba;
+  --text-muted: #7c7c85;
+  --accent: #ef4b55;
+  --accent-strong: #ff5f68;
+  --accent-soft: rgba(239, 75, 85, .14);
+  --series-1: #e66767;
+  --series-2: #3987e5;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --radius: 12px;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text-primary); font: 14px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+a:hover { color: var(--accent-strong); }
+button { font: inherit; color: inherit; cursor: pointer; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--text-muted); }
+.hidden { display: none !important; }
+
+.wrap { max-width: 1320px; margin: 0 auto; padding: 20px 16px 48px; }
+header.top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 280px; }
+.logo { width: 34px; height: 34px; border-radius: 9px; background: var(--accent-soft); display: grid; place-items: center; flex: none; }
+.brand h1 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
+.brand .hw { color: var(--text-secondary); font-size: 12.5px; }
+.btn { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; font-size: 13px; }
+.btn:hover { border-color: #3a3a40; background: var(--surface-3); }
+
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-secondary); font-weight: 600; margin: 26px 0 12px; display: flex; align-items: center; gap: 10px; }
+h2:first-child { margin-top: 0; }
+h2 .count { color: var(--text-muted); font-weight: 500; letter-spacing: 0; text-transform: none; }
+h2::before { content: ""; width: 3px; height: 13px; background: var(--accent); border-radius: 2px; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); }
+
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; flex-wrap: wrap; }
+.seg button { background: none; border: 0; padding: 5px 12px; border-radius: 6px; font-size: 12.5px; color: var(--text-secondary); white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--surface-3); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--accent); }
+.seg.big button { padding: 7px 16px; font-size: 13.5px; }
+
+.layout { display: grid; grid-template-columns: 370px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+/* inputs */
+.form { padding: 16px; }
+.form h3 { margin: 18px 0 10px; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); padding-top: 14px; border-top: 1px solid var(--border); }
+.form h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.row.one { grid-template-columns: minmax(0, 1fr); }
+.field label, .field .lbl { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
+.unit { position: relative; }
+.unit span { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px; pointer-events: none; }
+input[type=number], select { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text-primary); font: inherit; font-variant-numeric: tabular-nums; }
+.unit input { padding-right: 44px; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input:focus, select:focus, .btn:focus-visible, .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input.bad { border-color: var(--critical); }
+input[readonly] { background: var(--surface-1); color: var(--text-secondary); border-style: dashed; }
+.calc-tag { font-size: 11px; background: var(--accent-soft); color: var(--accent-strong); padding: 0 6px; border-radius: 999px; margin-left: 4px; }
+#in-laser, #in-light { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+select:disabled { opacity: .5; }
+.hint a { text-decoration: underline; }
+.hint { font-size: 12px; color: var(--text-muted); margin: -2px 0 10px; }
+.lines { display: grid; grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr); gap: 8px 10px; align-items: center; margin-bottom: 10px; }
+.lines .hd { font-size: 12px; color: var(--text-secondary); }
+.lines i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+
+/* results */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.tile { padding: 14px 16px 15px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tile .label { color: var(--text-secondary); font-size: 12.5px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tile .value { font-size: 26px; font-weight: 650; letter-spacing: -.02em; line-height: 1.15; }
+.tile .value small { font-size: 14px; color: var(--text-secondary); font-weight: 500; margin-left: 3px; letter-spacing: 0; }
+.tile .sub { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; line-height: 1.4;
+  min-height: calc(4 * 1.4em); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.tile { position: relative; }
+.tile .label { min-height: calc(2 * 1.35em); line-height: 1.35; align-items: flex-start; }
+.tile .label > span:first-child { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tile .pillrow { height: 22px; margin: -2px 0 -4px; }
+.tile .pillrow:empty { display: none; }
+.tiles.haspills .tile .pillrow:empty { display: block; }
+.tile .value { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.help { flex: none; width: 17px; height: 17px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text-muted); font: 600 11px/15px var(--sans); text-align: center; padding: 0; cursor: help; }
+.help:hover, .help:focus-visible { color: var(--text-primary); border-color: var(--text-muted); outline: none; }
+.helptip { position: absolute; left: 10px; right: 10px; top: 42px; z-index: 6; background: var(--surface-3); border: 1px solid #36363c;
+  border-radius: 8px; padding: 9px 11px; font-size: 12px; line-height: 1.45; color: var(--text-secondary); box-shadow: 0 6px 20px rgba(0,0,0,.45); display: none; }
+.help:hover + .helptip, .help:focus + .helptip { display: block; }
+.zoomhead b { min-width: 4em; text-align: right; }
+#zoom-hint, #photo-hint, #red-hint { min-height: 3.2em; }
+.report { padding: 14px 16px; }
+.report textarea { width: 100%; min-height: 140px; resize: vertical; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px; color: var(--text-primary); font: 12.5px/1.55 var(--mono); }
+.report .bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.report .bar span { font-size: 12px; color: var(--text-muted); }
+@media (max-width: 600px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .tile { padding: 12px; }
+  .tile .value { font-size: 21px; }
+}
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 2px 8px 2px 6px; border-radius: 999px; background: var(--surface-3); color: var(--text-primary); white-space: nowrap; }
+.pill svg { width: 12px; height: 12px; flex: none; }
+.pill.good svg { color: var(--good); } .pill.warning svg { color: var(--warning); } .pill.critical svg { color: var(--critical); }
+
+.chart { padding: 14px 16px 10px; position: relative; }
+.chart .ctitle { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.chart .ctitle b { font-weight: 600; font-size: 13.5px; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.chart svg { display: block; width: 100%; height: 300px; overflow: visible; }
+.chart .axis { fill: var(--text-muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.chart .note { fill: var(--text-secondary); font-size: 11px; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--surface-3); border: 1px solid #36363c; border-radius: 8px; padding: 7px 10px; font-size: 12px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,.45); z-index: 5; }
+.tip .t { color: var(--text-muted); margin-bottom: 3px; }
+.tip .r { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.tip .r i { width: 10px; height: 3px; border-radius: 2px; }
+.tip .r b { font-weight: 600; }
+.tip .r span { color: var(--text-secondary); }
+
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: right; padding: 9px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; font-variant-numeric: tabular-nums; }
+th { font-size: 11.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+th:first-child, td:first-child { text-align: left; }
+tr:last-child td { border-bottom: 0; }
+tr.here td { background: var(--surface-2); }
+.tag { font-size: 11px; background: var(--accent-soft); color: var(--accent-strong); padding: 1px 7px; border-radius: 999px; margin-left: 6px; font-weight: 500; }
+
+.notes { padding: 14px 18px; color: var(--text-secondary); font-size: 13px; }
+.notes ul { margin: 0; padding-left: 18px; }
+.notes li { margin: 5px 0; }
+.notes b { color: var(--text-primary); font-weight: 600; }
+.warn { display: flex; gap: 10px; padding: 12px 16px; margin-bottom: 12px; font-size: 13px; color: var(--text-secondary); }
+.warn svg { width: 16px; height: 16px; flex: none; color: var(--warning); margin-top: 2px; }
+.warn b { color: var(--text-primary); }
+h2 .clear { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 500; padding: 4px 12px; font-size: 12.5px; color: var(--text-secondary); }
+.chk { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); margin: 2px 0 10px; cursor: pointer; }
+.chk input { width: 15px; height: 15px; accent-color: var(--accent); margin: 0; }
+input[type=range] { width: 100%; accent-color: var(--accent); margin: 6px 0 2px; }
+.zoomhead { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); }
+.zoomhead b { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+.zoomends { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+select:disabled, input:disabled { opacity: .5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#ef4b55" stroke-width="1.8" stroke-linecap="round"><path d="M2 10h6M11 5.5l7-3M11 10h7M11 14.5l7 3"/></svg></div>
+      <div>
+        <h1>MPE calculator</h1>
+        <div class="hw">Maximum permissible exposure for show lasers and high-power moving lights</div>
+      </div>
+    </div>
+    <button class="btn" id="share" type="button" title="Copy a link to this calculation">Share link</button>
+    <div class="seg big" id="mode" role="group" aria-label="Source type">
+      <button data-v="laser" aria-pressed="true">Show laser</button>
+      <button data-v="light" aria-pressed="false">Moving light</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- ================= inputs ================= -->
+    <section>
+      <h2>Inputs <button class="btn clear" id="clear" type="button" title="Reset every input to its default">Clear</button></h2>
+      <div class="card form">
+        <div id="preset">
+          <h3>Preset</h3>
+          <div class="row">
+            <div class="field"><label for="pmfr">Manufacturer</label><select id="pmfr"></select></div>
+            <div class="field"><label for="pmodel">Model</label><select id="pmodel" disabled></select></div>
+          </div>
+          <div class="hint" id="pnote"></div>
+        </div>
+
+        <div id="in-laser">
+          <h3>Laser output</h3>
+          <div class="lines">
+            <span></span><span class="hd">Wavelength (nm)</span><span class="hd">Power at the aperture (mW)</span>
+            <i style="background:#e0453a"></i><input type="number" id="nm1" value="638" min="400" max="700" aria-label="Red wavelength"><input type="number" id="p1" value="1000" min="0" aria-label="Red power">
+            <i style="background:#3fbf4f"></i><input type="number" id="nm2" value="520" min="400" max="700" aria-label="Green wavelength"><input type="number" id="p2" value="1000" min="0" aria-label="Green power">
+            <i style="background:#3f6fe8"></i><input type="number" id="nm3" value="450" min="400" max="700" aria-label="Blue wavelength"><input type="number" id="p3" value="1000" min="0" aria-label="Blue power">
+          </div>
+          <div class="hint">Use measured power, not the nameplate value. Set a colour to 0 if it is not there. With a grating or splitter, enter the power of one beam.</div>
+
+          <h3>Beam</h3>
+          <div class="row">
+            <div class="field"><label for="a">Beam diameter at aperture</label><div class="unit"><input type="number" id="a" value="5" min="0" step="0.1"><span>mm</span></div></div>
+            <div class="field"><label for="phi">Divergence (full angle)</label><div class="unit"><input type="number" id="phi" value="1" min="0" step="0.1"><span>mrad</span></div></div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="defA">Diameter given at</label>
+              <select id="defA"><option value="e2">1/e²</option><option value="e1">1/e (d63)</option><option value="fwhm">FWHM</option></select></div>
+            <div class="field"><label for="defPhi">Divergence given at</label>
+              <select id="defPhi"><option value="e2">1/e²</option><option value="e1">1/e (d63)</option><option value="fwhm">FWHM</option></select></div>
+          </div>
+          <label class="chk"><input type="checkbox" id="percol"> Different beam per colour</label>
+          <div id="percolrow" class="hidden">
+            <div class="lines">
+              <span></span><span class="hd">Diameter (mm)</span><span class="hd">Divergence (mrad)</span>
+              <i style="background:#e0453a"></i><input type="number" id="a1" placeholder="as above" step="0.1" aria-label="Red diameter"><input type="number" id="phi1" placeholder="as above" step="0.1" aria-label="Red divergence">
+              <i style="background:#3fbf4f"></i><input type="number" id="a2" placeholder="as above" step="0.1" aria-label="Green diameter"><input type="number" id="phi2" placeholder="as above" step="0.1" aria-label="Green divergence">
+              <i style="background:#3f6fe8"></i><input type="number" id="a3" placeholder="as above" step="0.1" aria-label="Blue diameter"><input type="number" id="phi3" placeholder="as above" step="0.1" aria-label="Blue divergence">
+            </div>
+          </div>
+          <div class="row one">
+            <div class="field"><label for="prof">Beam profile</label>
+              <select id="prof">
+                <option value="multimode">Multimode diode (typical show laser)</option>
+                <option value="flat">Flat-top (worst case)</option>
+                <option value="gauss">Single-mode Gaussian (DPSS, OPSL, measured)</option>
+              </select></div>
+          </div>
+          <div class="hint">Data sheets usually give an average over the colours, or a maximum. A tighter beam is more hazardous, so enter the smallest values you know of. Show lasers are multimode diodes, flatter than a Gaussian beam; the typical setting sits between Gaussian and flat-top.</div>
+
+          <h3>Beam movement</h3>
+          <div class="row one"><div class="seg" id="beam" role="group" aria-label="Beam movement">
+            <button data-v="static" aria-pressed="true">Static beam</button>
+            <button data-v="scan" aria-pressed="false">Scanned across the audience</button>
+          </div></div>
+          <div id="scanrow" class="hidden">
+            <div class="row one"><div class="seg" id="skind" role="group" aria-label="Scan description">
+              <button data-v="pattern" aria-pressed="true">Pattern (BEYOND values)</button>
+              <button data-v="measured" aria-pressed="false">Measured pulses</button>
+            </div></div>
+            <div id="srow-pattern">
+              <div class="row one">
+                <div class="field"><label for="spat">Pattern at the audience</label>
+                  <select id="spat">
+                    <option value="line2">Line, there and back</option>
+                    <option value="line1">Line, one way (return blanked)</option>
+                    <option value="circle">Circle, ellipse, closed shape without corners</option>
+                    <option value="dots">Beam dots (beam effects, fans of dots)</option>
+                  </select></div>
+              </div>
+              <div class="row">
+                <div class="field"><label for="spps">Scan rate</label><div class="unit"><input type="number" id="spps" value="30" min="0" step="any"><span>kpps</span></div></div>
+                <div class="field"><label for="spts">Points per frame</label><div class="unit"><input type="number" id="spts" value="1000" min="1"><span>pts</span></div></div>
+              </div>
+              <div class="row">
+                <div class="field" id="f-sang"><label for="sang">Pattern size (full)</label><div class="unit"><input type="number" id="sang" value="40" min="0" step="any"><span>°</span></div></div>
+                <div class="field" id="f-sanch"><label for="sanch">Anchor points at each end</label><div class="unit"><input type="number" id="sanch" value="4" min="0"><span>pts</span></div></div>
+                <div class="field hidden" id="f-sdot"><label for="sdot">Points per dot</label><div class="unit"><input type="number" id="sdot" value="10" min="1"><span>pts</span></div></div>
+              </div>
+              <div class="row">
+                <div class="field"><label for="srep">Drawn over the same spot per frame</label><div class="unit"><input type="number" id="srep" value="1" min="1"><span>×</span></div></div>
+                <div class="field" id="f-sbeams"><label for="sbeams">Beams on the same path</label><div class="unit"><input type="number" id="sbeams" value="1" min="1"><span>beams</span></div></div>
+              </div>
+              <div class="hint">BEYOND: scan rate from Projector settings › Scan rate (use the lowest rate your effects reach); points per frame from the frame's Hardware points, at least the projector's Minimum number of points (200 by default). Pattern size = projector scan angle × size %. BEYOND adds anchor points at line ends and sharp corners, so a line end holds the beam still. Drawn over the same spot: how often the frame itself draws over one spot (a doubled line, a scanned fan crossing one person). Beams on the same path: a grating or splitter whose beams follow each other along the scan; enter the power of one beam above.</div>
+            </div>
+            <div id="srow-measured" class="hidden">
+              <div class="row">
+                <div class="field"><label for="mtp">Pulse width (FWHM, 7 mm)</label><div class="unit"><input type="number" id="mtp" value="100" min="0" step="any"><span>µs</span></div></div>
+                <div class="field"><label for="mrate">Pulses per second</label><div class="unit"><input type="number" id="mrate" value="60" min="0" step="any"><span>per s</span></div></div>
+              </div>
+              <div class="hint">Measured with a fast detector behind a 7 mm aperture at the closest audience position, at the brightest spot (usually a corner, line end or dot). The pulse width is kept the same at every distance.</div>
+            </div>
+            <div class="row">
+              <div class="field"><label for="sfail">Scan-fail reaction time</label><div class="unit"><input type="number" id="sfail" value="10" min="0" step="any"><span>ms</span></div></div>
+            </div>
+          </div>
+          <div class="row one">
+            <div class="field"><label for="ed">Standard</label>
+              <select id="ed">
+                <option value="2014">IEC 60825-1:2014 (current)</option>
+                <option value="2007" selected>IEC 60825-1:2007 / EU 2006/25/EC (older pulse rules)</option>
+              </select></div>
+          </div>
+        </div>
+
+        <div id="in-light" class="hidden">
+          <h3>Light output</h3>
+          <div class="field"><span class="lbl">I know the</span></div>
+          <div class="row one"><div class="seg" id="photo" role="group" aria-label="Known photometric data">
+            <button data-v="lux" aria-pressed="true">Lux at a distance</button>
+            <button data-v="lm" aria-pressed="false">Lumens and beam angle</button>
+          </div></div>
+          <div class="row" id="photo-lux">
+            <div class="field"><label for="lux">Peak illuminance <span class="calc-tag hidden" id="lux-tag">converted</span></label><div class="unit"><input type="number" id="lux" value="60000" min="0"><span>lx</span></div></div>
+            <div class="field"><label for="luxd">at a distance of</label><div class="unit"><input type="number" id="luxd" value="20" min="0"><span>m</span></div></div>
+          </div>
+          <div class="row" id="photo-lm">
+            <div class="field"><label for="lm">Fixture output <span class="calc-tag hidden" id="lm-tag">converted</span></label><div class="unit"><input type="number" id="lm" value="12000" min="0"><span>lm</span></div></div>
+            <div class="field"><label for="bang">Beam angle (full)</label><div class="unit"><input type="number" id="bang" value="2.5" step="0.1"><span>°</span></div></div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="zmin">Zoom, narrowest</label><div class="unit"><input type="number" id="zmin" min="0" step="0.1" placeholder="optional"><span>°</span></div></div>
+            <div class="field"><label for="zmax">Zoom, widest</label><div class="unit"><input type="number" id="zmax" min="0" step="0.1" placeholder="optional"><span>°</span></div></div>
+          </div>
+          <div id="zoomslide" class="hidden">
+            <div class="zoomhead"><span>Zoom</span><b id="zoomval"></b></div>
+            <input type="range" id="zoom" min="0" max="1000" step="1" value="0" aria-label="Zoom (beam angle)">
+            <div class="zoomends"><span id="zoomlo"></span><span id="zoomhi"></span></div>
+            <div class="row one">
+              <div class="field" id="f-luxw"><label for="luxw">Lux at widest zoom, same distance</label><div class="unit"><input type="number" id="luxw" min="0" placeholder="optional"><span>lx</span></div></div>
+            </div>
+          </div>
+          <div class="hint" id="zoom-hint"></div>
+          <div id="xorow" class="hidden">
+            <div class="row one">
+              <div class="field"><label for="wxo">Beam diameter at the crossover (narrowest point)</label><div class="unit"><input type="number" id="wxo" value="40" min="0"><span>mm</span></div></div>
+            </div>
+            <div class="hint" id="xo-hint"></div>
+          </div>
+          <div class="hint" id="photo-hint"></div>
+          <h3>Source</h3>
+          <div class="row">
+            <div class="field"><label for="dsrc">Front lens diameter</label><div class="unit"><input type="number" id="dsrc" value="170" min="0"><span>mm</span></div></div>
+            <div class="field"><label for="cct">Colour temperature</label><div class="unit"><input type="number" id="cct" value="7500" min="1800" max="20000" step="100"><span>K</span></div></div>
+          </div>
+          <div class="row one">
+            <div class="field"><label for="eng">Light engine</label><select id="eng"></select></div>
+          </div>
+          <div class="row one">
+            <div class="field"><label for="peak">Front lens brightness</label>
+              <select id="peak">
+                <option value="1.5">Typical (hot spots ×1.5)</option>
+                <option value="2">Uneven: LED array or lamp image clearly visible (×2)</option>
+                <option value="1">Even: homogeneous optics, or measured</option>
+              </select></div>
+          </div>
+          <div class="hint">The lit part of the front lens is what the eye sees as the source. If only part of it lights up, enter that smaller diameter. Enter open white data; a colour filter or a single colour lowers the lux far more than the hazard.</div>
+          <div class="row one">
+            <div class="field"><label for="lstd">Standard</label>
+              <select id="lstd">
+                <option value="2013">IEC 62471-5:2015 / ICNIRP 2013 (current)</option>
+                <option value="2006" selected>IEC 62471:2006 / EN 62471 / EU 2006/25/EC (older, stricter for small sources)</option>
+              </select></div>
+          </div>
+        </div>
+
+        <h3>Reduction for the show</h3>
+        <div class="row">
+          <div class="field"><label for="pct" id="pct-label">Power reduced to</label><div class="unit"><input type="number" id="pct" value="100" min="0" max="100" step="any"><span>%</span></div></div>
+          <div class="field" id="lens-field"><label for="lens">Diverging lens fitted</label><div class="unit"><input type="number" id="lens" value="" step="0.25" placeholder="none"><span>dpt</span></div></div>
+          <div class="field hidden" id="pwm-field"><label for="pwm">PWM frequency</label><div class="unit"><input type="number" id="pwm" value="" min="0" step="any" placeholder="none"><span>Hz</span></div></div>
+        </div>
+        <div class="hint" id="red-hint"></div>
+
+        <h3>Exposure</h3>
+        <div class="row">
+          <div class="field"><label for="r">Distance to the nearest eye</label><div class="unit"><input type="number" id="r" value="15" min="0" step="0.5"><span>m</span></div></div>
+          <div class="field"><label for="t" id="t-label">Exposure time</label><div class="unit"><input type="number" id="t" value="0.25" min="0" step="any"><span>s</span></div></div>
+        </div>
+        <div class="row one"><div class="seg" id="tpre" role="group" aria-label="Exposure time presets"></div></div>
+        <div class="hint" id="t-hint"></div>
+      </div>
+    </section>
+
+    <!-- ================= results ================= -->
+    <section>
+      <h2>Results <span class="count" id="rsub"></span></h2>
+      <div class="card warn hidden" id="err"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.2 15.2 14H.8L8 1.2Zm-.8 5v4h1.6v-4H7.2Zm0 5.2V13h1.6v-1.6H7.2Z"/></svg><div id="errmsg"></div></div>
+      <div id="out">
+        <div class="tiles" id="tiles"></div>
+
+        <h2>Exposure over distance</h2>
+        <div class="card chart" id="chart">
+          <div class="ctitle"><b id="ctitle">Exposure as a multiple of the limit</b><div class="legend" id="legend"></div></div>
+          <svg id="svg" role="img" aria-label="Exposure relative to the limit over distance"></svg>
+          <div class="tip hidden" id="tip"></div>
+        </div>
+
+        <h2>By distance</h2>
+        <div class="card tbl-wrap"><table id="tbl"></table></div>
+
+        <div id="dazzle">
+          <h2>Dazzle distance (NODD) <span class="count">how far the beam still blocks part of the view</span></h2>
+          <div class="card tbl-wrap"><table id="dtbl"></table></div>
+        </div>
+
+        <h2>Text for a risk assessment</h2>
+        <div class="card report">
+          <div class="bar"><span>The calculated results, ready to paste.</span><button class="btn" id="copyrep" type="button">Copy text</button></div>
+          <textarea id="report" readonly spellcheck="false" aria-label="Text for a risk assessment"></textarea>
+        </div>
+      </div>
+
+      <h2>How this is calculated</h2>
+      <div class="card notes">
+        <ul>
+          <li><b>What the results rest on:</b> the limits follow the named standards; everything the data sheet does not pin down (beam profile, line-end dwell, light spectrum, lens hot spots, zoom fall-off) uses typical real-world values from published measurements. Measured values of your own unit (power through a 7 mm aperture, beam size, pulse width, lux at a distance) give the most reliable answer, and the beam-profile and lens settings let you choose the worst case instead.</li>
+        </ul>
+      </div>
+      <div class="card notes" id="notes-laser">
+        <ul>
+          <li><b>Limits:</b> eye MPE for 400 to 700 nm and a point source, IEC 60825-1:2014 (identical to ICNIRP 2013): 2 mJ/m² up to 5 µs, 18·t<sup>0.75</sup> J/m² up to 10 s (25.5 W/m² = 2.55 mW/cm² at 0.25 s), then 10 W/m². From 10 s the photochemical limit (100·C<sub>B</sub> J/m², then C<sub>B</sub> W/m²) is checked for 400 to 600 nm and the lower one counts. Thermal exposure adds over the colours; photochemical adds each colour against its own limit. The 2007 edition and EU Directive 2006/25/EC have the same CW limits and older pulse rules (5 mJ/m² up to 18 µs, C5 = N<sup>−0.25</sup> over every pulse).</li>
+          <li><b>Beam:</b> irradiance is averaged over a 7 mm pupil. Diameter and divergence are converted to d63 from their own definitions; d63² = (a·(1 + D·r))² + (φ·r)² with a lens of power D at the aperture. Show lasers are multimode diodes, flat along one axis and near-Gaussian along the other; the typical profile sits halfway (geometric mean) between a Gaussian and a round flat-top beam of the same size, which delivers 1.1 to 1.4 times the Gaussian value into the pupil. Choose flat-top for the worst case, Gaussian for single-mode lasers. The beam is taken as narrowest at the aperture; for a projector focused further out, measure distances from the narrowest point.</li>
+          <li><b>Scanning:</b> every spot of the pattern is checked and the worst counts. A line crossing is a pulse whose energy and FWHM come from the exact integral of the beam passing the 7 mm aperture at the beam speed (path angle × frame rate × distance). At a line end the beam rests for the anchor points plus about two points of galvo lag, and the passes in and out merge into one pulse. Beam dots last points ÷ scan rate. Each spot must meet the single-pulse limit (with C5 for N pulses within 10 s) and the average over the exposure time, which also covers every shorter group of pulses. Pulses shorter than 5 µs are also assessed as 5 µs pulses of the same peak power (IEC 60825-1:2014 ISH1) and the lower result counts. Real galvos can lag more at sharp turns; a measured pulse width is the reliable check. The scanned result relies on a working scan-fail safeguard; the scan-fail tile shows what a stopped beam delivers in its reaction time (ILDA: 10 ms, preferably 1 ms; DGUV/DIN 56912: at most 100 ms).</li>
+          <li><b>Exposure time:</b> 0.25 s is the blink and aversion response IEC 60825-1 and ICNIRP use for accidental exposure. Germany's DGUV Information 203-036 does not accept it for laser shows: it asks for at least 4 s per event (deliberate eye closing and turning away) and compliance over the whole show (for example 15 min).</li>
+          <li><b>Lens and reduction:</b> a diverging lens of power D adds a divergence of a·D. The lens shown is the total lens on the laser's own beam; lenses in contact add. Percentages are of full power.</li>
+          <li><b>Dazzle distance (NODD):</b> the distance out to which the beam, resting on the eye, hides a patch of the view of the given width. Simplified maximum dazzle exposure table of Williamson and McLin (2018) at 555 nm, in µW/cm²: 2° 0.001 / 0.6 / 40, 10° 0.04 / 30 / 2,000, 20° 0.16 / 120 / 8,000, 40° 0.6 / 450 / 30,000 for night / dusk / day, each colour weighted by the CIE 2008 eye sensitivity the framework specifies. The table is for a 40-year-old with dark eyes looking for a small, faint object (0.08° at 60 % contrast); older or light-eyed viewers are dazzled further out, roughly 1.2 to 1.5 times the distance at 65. Loss in the air is ignored.</li>
+          <li><b>Skin:</b> the skin limit is at least 50 times higher than the eye MPE, so it is met wherever the eye MPE is met. It only matters for people whose eyes are protected.</li>
+          <li><b>Not covered:</b> wavelengths outside 400 to 700 nm, pulsed (Q-switched) lasers, viewing through binoculars or camera lenses, reflections, atmospheric scintillation on long outdoor paths.</li>
+        </ul>
+      </div>
+      <div class="card notes hidden" id="notes-light">
+        <ul>
+          <li><b>Risk group:</b> risk group 2 is acceptable for an audience, risk group 3 is not. The verdict and the hazard distance use the RG2/RG3 boundary, a 0.25 s look, under the selected standard. The exposure time you enter is for how long someone can stare into the fixture.</li>
+          <li><b>IEC 62471-5:2015 / ICNIRP 2013:</b> retinal thermal radiance (R(λ) weighting 380 to 1400 nm) ≤ 28,000 / α W/m²/sr from 0.25 s, 20,000 / (α·t<sup>0.25</sup>) below; continuous light is averaged over 11 mrad and α is taken at least 11 mrad and at most 100 mrad. Blue light: weighted radiance × time ≤ 10⁶ J/m²/sr, averaged over 11 mrad up to 100 s, then 1.1·√t mrad.</li>
+          <li><b>IEC 62471:2006 / EN 62471 / EU 2006/25/EC:</b> the older ICNIRP 1997 weighting (10 × B(λ) in the blue) and 50,000 / (C·t<sup>0.25</sup>) W/m²/sr up to 10 s, C = α between 1.7 and 100 mrad, with a 1.7 mrad field of view at 0.25 s. The Directive itself gives no averaging angle for retinal thermal; this uses the EN 62471 / CIE S009 reading, while the Commission's non-binding guide simplifies to shorter distances. For small, blue-rich beam sources this gives much longer hazard distances than IEC 62471-5; many data sheets and EU workplace assessments use it.</li>
+          <li><b>Source model:</b> the front lens is an evenly lit disc of luminance = peak intensity ÷ lens area, raised by the hot-spot factor where the lens is larger than the averaging angle (measured: about 1 for profiles at narrow zoom and even optics, up to about 2 for washes and wide zoom; typical 1.5). Close to the fixture the eye sees only a patch of the lens, limited to 1.2 × the beam angle. A negative beam angle makes the crossover the source. Wider zoom lowers the peak intensity along a typical curve fitted to the published zoom photometry of 36 fixtures (with lux at both ends it follows the data). Lux from a photometric table is converted as lux × distance² from the front lens. Below 4° beam angle, lumens do not give the peak intensity reliably (0.3 to 5 times in published data), so lux or candela is needed.</li>
+          <li><b>Spectrum by light engine</b> (lumens per R-weighted watt for ICNIRP 2013 / 1997, blue light per lumen), typical values: white LED 314 (285 at 10,000 K) / 190 to 72 by colour temperature, blue light 0.9 × black body; violet-pumped or unknown LED 245, blue light × 1.45; laser-phosphor 300 (model-based), blue light 0.9 × black body; discharge lamp in a moving head 270 / 78; open-face HMI as a black body including its infrared, at most 200, blue light × 1.4; xenon short arc 130 (an unverified estimate); tungsten as a full black body including its infrared; RGB mixes 140 / 24 with 3.7 mW of blue light per lumen (Claypaky Xtylos measured at full RGB: 140 lm/W, 3.1 mW/lm). Sources: CIE 015:2018 LED spectra, DGUV BoSS spectroradiometer tables of 13 moving heads.</li>
+          <li><b>PWM dimming:</b> every pulse runs at full brightness, so with a PWM frequency each pulse is also checked against the ICNIRP 2013 repetitive-pulse rule (pulse limit × n<sup>−0.25</sup>, at least 0.4 or 0.2) for sources larger than 5 mrad. Without a frequency the dimmer is taken as current dimming.</li>
+          <li><b>Dazzle distance (NODD):</b> the illuminance at the eye in lux is compared with the same maximum dazzle exposure table as on the laser page as lux ÷ 683, raised by about 5 % because the framework's CIE 2008 eye sensitivity rates white light slightly brighter than lux does. Open white is assumed. Loss in the air is ignored.</li>
+          <li><b>Not covered:</b> UV and infrared limits, heat on skin and materials close to the lens (see the fixture's minimum distance to lit objects).</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="presets.js"></script>
+<script src="calc.js"></script>
+<script>
+(function () {
+'use strict';
+const C = window.MPE;
+const $ = id => document.getElementById(id);
+const IDS = ['nm1', 'p1', 'nm2', 'p2', 'nm3', 'p3', 'a', 'phi', 'defA', 'defPhi', 'a1', 'phi1', 'a2', 'phi2', 'a3', 'phi3', 'spat', 'spps', 'spts', 'sang',
+  'sanch', 'sdot', 'srep', 'sbeams', 'mtp', 'mrate', 'sfail', 'ed', 'prof', 'lux', 'luxd', 'lm', 'bang', 'zmin', 'zmax', 'luxw', 'wxo', 'dsrc', 'cct', 'eng', 'peak', 'lstd', 'pct', 'lens', 'pwm', 'r', 't'];
+const CHECKS = ['percol'];
+const SEGS = ['mode', 'beam', 'skind', 'photo'];
+const PER_MODE = { pct: { laser: '100', light: '100' }, t: { laser: '0.25', light: '10' } };   // inputs kept per mode
+const DEFAULTS = {};
+const state = { mode: 'laser', beam: 'static', skind: 'pattern', photo: 'lux', keep: { pct: { laser: '100', light: '100' }, t: { laser: '0.25', light: '10' } } };
+const TPRE = { laser: [['0.25', '0.25 s'], ['4', '4 s'], ['10', '10 s'], ['100', '100 s'], ['900', '15 min']],
+  light: [['10', '10 s'], ['100', '100 s'], ['1000', '1000 s']] };
+const ICON = {
+  good: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.3 2.3 4.7-5.3"/></svg>',
+  warning: '<svg viewBox="0 0 12 12" fill="currentColor"><path d="M6 1l5.2 9.5H.8L6 1Z"/></svg>',
+  critical: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l6 6M9 3l-6 6"/></svg>',
+};
+Object.keys(C.ENGINES).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = C.ENGINES[k].name; $('eng').appendChild(o); });
+$('eng').value = 'led';
+
+// ---------- formatting ----------
+function fmt(x, sig) {
+  sig = sig || 3;
+  if (!isFinite(x)) return '∞';
+  if (x === 0) return '0';
+  const a = Math.abs(x);
+  if (a >= 1e9 || a < 1e-3) {
+    const [m, e] = x.toExponential(sig - 1).split('e');
+    return m + '×10' + String(+e).replace(/[-0-9]/g, c => '⁻⁰¹²³⁴⁵⁶⁷⁸⁹'['-0123456789'.indexOf(c)]);
+  }
+  return Number(x.toPrecision(sig)).toLocaleString('en-US', { maximumSignificantDigits: sig });
+}
+// Safety figures are rounded in the safe direction: distances, lenses and factors up, allowances down.
+function roundSig(x, sig, dir) {
+  if (!isFinite(x) || x === 0) return x;
+  const p = Math.pow(10, Math.floor(Math.log10(Math.abs(x))) - sig + 1);
+  return (dir > 0 ? Math.ceil(x / p - 1e-9) : Math.floor(x / p + 1e-9)) * p;
+}
+const up = (x, sig) => fmt(roundSig(x, sig || 3, 1), sig);
+const down = (x, sig) => fmt(roundSig(x, sig || 3, -1), sig);
+// Exposure ratios near 1 never round onto the wrong side of the limit.
+function fmtRatio(hr) {
+  const s = fmt(hr), v = +s.replace(/,/g, '');
+  if (hr > 1 && v <= 1) return '> 1';
+  if (hr <= 1 && v > 1) return '< 1';
+  if (hr < 1 && v >= 1) return '< 1';
+  return s;
+}
+function fmtDist(m, dir) {       // [value, unit]
+  const f = dir ? (x => fmt(roundSig(x, 3, dir))) : (x => fmt(x));
+  if (!isFinite(m)) return ['> 1000', 'km'];
+  if (m >= 1000) return [f(m / 1000), 'km'];
+  if (m < 1) return [fmt(roundSig(m * 100, 2, dir || 1), 2), 'cm'];
+  return [f(m), 'm'];
+}
+function fmtLen(m) { return m < 0.1 ? fmt(m * 1000) + ' mm' : m < 1 ? fmt(m * 100) + ' cm' : fmt(m) + ' m'; }
+function fmtTime(s, dir) {       // [value, unit]
+  const f = x => dir ? fmt(roundSig(x, 3, dir)) : fmt(x);
+  if (s < 1e-6) return [f(s * 1e9), 'ns'];
+  if (s < 1e-3) return [f(s * 1e6), 'µs'];
+  if (s < 1) return [f(s * 1e3), 'ms'];
+  if (s < 120) return [f(s), 's'];
+  if (s < 7200) return [f(s / 60), 'min'];
+  return [f(s / 3600), 'h'];
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------- inputs ----------
+function val(id) { return parseFloat($(id).value); }
+function blank(id) { return $(id).value.trim() === ''; }
+function setSeg(id, v) {
+  if (id === 'mode' && v !== state.mode) {        // keep per-mode values of the shared fields
+    Object.keys(PER_MODE).forEach(f => { state.keep[f][state.mode] = $(f).value; $(f).value = state.keep[f][v]; });
+  }
+  state[id] = v;
+  $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+}
+function syncVisibility() {
+  const laser = state.mode === 'laser';
+  $('in-laser').classList.toggle('hidden', !laser);
+  $('in-light').classList.toggle('hidden', laser);
+  $('notes-laser').classList.toggle('hidden', !laser);
+  $('notes-light').classList.toggle('hidden', laser);
+  $('lens-field').classList.toggle('hidden', !laser);
+  $('pwm-field').classList.toggle('hidden', laser);
+  $('pct-label').textContent = laser ? 'Power reduced to' : 'Dimmed to';
+  $('t-label').textContent = laser ? 'Exposure time' : 'Staring time';
+  $('percolrow').classList.toggle('hidden', !$('percol').checked);
+  $('scanrow').classList.toggle('hidden', state.beam !== 'scan');
+  $('srow-pattern').classList.toggle('hidden', state.skind !== 'pattern');
+  $('srow-measured').classList.toggle('hidden', state.skind !== 'measured');
+  const dots = $('spat').value === 'dots';
+  $('f-sdot').classList.toggle('hidden', !dots);
+  $('f-sang').classList.toggle('hidden', dots);
+  $('f-sanch').classList.toggle('hidden', dots || $('spat').value === 'circle');
+  $('f-sbeams').classList.toggle('hidden', dots);
+  $('cct').disabled = $('eng').value === 'rgb';
+  const known = state.photo === 'lux';           // the other pair's main value is converted, not typed
+  $('lux').readOnly = !known; $('lm').readOnly = known;
+  $('lux-tag').classList.toggle('hidden', known); $('lm-tag').classList.toggle('hidden', !known);
+  $('photo-hint').textContent = (known
+    ? 'The distance can be any row of the photometric table. Candela = lux at 1 m. A negative beam angle means the beam narrows to a crossover in front of the fixture and widens after it; the beam angle is also used to limit the near field.'
+    : 'Enter any distance to see the matching lux. Lumens spread evenly over the beam angle; below 4° that is not reliable and lux is needed.') +
+    ' Use the narrowest zoom, open white, no gobo.';
+  syncZoom();
+  const pre = $('tpre'); const tv = $('t').value;
+  pre.innerHTML = TPRE[state.mode].map(([v, l]) => '<button data-v="' + v + '" aria-pressed="' + (+v === +tv) + '">' + l + '</button>').join('');
+  $('t-hint').textContent = laser
+    ? '0.25 s is the blink reflex IEC/ICNIRP use for accidental exposure. Germany (DGUV Information 203-036) does not accept it for laser shows: use at least 4 s per event and check the whole show. Use 10 s or more where people may look into the beam on purpose.'
+    : 'The risk-group verdict always uses 0.25 s (RG2/RG3 boundary). This time is for how long someone may stare into the fixture.';
+}
+// Nothing is stored in the browser: the state lives only in the address (#...), so reloads and links keep it.
+function save() { history.replaceState(null, '', '#' + shareHash()); }
+// The page state as a short link: mode and segments, every input that differs from its default, the preset by name.
+function shareHash() {
+  const q = new URLSearchParams();
+  SEGS.forEach(id => q.set(id, state[id]));
+  IDS.forEach(id => { if ($(id).value !== DEFAULTS[id]) q.set(id, $(id).value); });
+  CHECKS.forEach(id => { if ($(id).checked) q.set(id, '1'); });
+  if (preset) q.set('preset', preset.mfr + '|' + preset.model);
+  return q.toString();
+}
+function readHash() {
+  if (location.hash.length < 2) return null;
+  const q = new URLSearchParams(location.hash.slice(1)), o = { keep: null };
+  SEGS.forEach(id => { if (q.has(id)) o[id] = q.get(id); });
+  IDS.forEach(id => { o[id] = q.has(id) ? q.get(id) : DEFAULTS[id]; });
+  CHECKS.forEach(id => { o[id] = q.get(id) === '1'; });
+  const pn = q.get('preset'), mode = o.mode || 'laser';
+  if (pn) { const i = PRESETS[mode].findIndex(p => p.mfr + '|' + p.model === pn); if (i >= 0) o.preset = { mode, idx: i }; }
+  return o;
+}
+function load(o) {
+  IDS.forEach(id => { if (o[id] !== undefined) $(id).value = o[id]; });
+  CHECKS.forEach(id => { if (o[id] !== undefined) $(id).checked = !!o[id]; });
+  if (o.keep) state.keep = JSON.parse(JSON.stringify(o.keep));
+  SEGS.forEach(id => { if (o[id] && $(id).querySelector('[data-v="' + o[id] + '"]')) { state[id] = o[id]; $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === o[id]))); } });
+}
+
+// Zoom: the slider runs on a log scale between the narrowest and widest zoom and drives the beam angle.
+function zoomRange() {
+  const lo = val('zmin'), hi = val('zmax');
+  return isFinite(lo) && isFinite(hi) && lo > 0 && hi > lo ? [lo, hi] : null;
+}
+function syncZoom() {
+  const z = zoomRange();
+  $('zoomslide').classList.toggle('hidden', !z);
+  $('f-luxw').classList.toggle('hidden', state.photo !== 'lux');
+  if (!z) { $('zoom-hint').textContent = 'Optional: the zoom range adds a slider, and the lux then refers to the narrowest zoom.'; return; }
+  const a = val('bang');
+  $('zoom').value = isFinite(a) ? Math.round(1000 * Math.log(Math.min(Math.max(a, z[0]), z[1]) / z[0]) / Math.log(z[1] / z[0])) : 0;
+  $('zoomval').textContent = isFinite(a) ? fmt(a) + '°' : '–';
+  $('zoomlo').textContent = fmt(z[0]) + '°'; $('zoomhi').textContent = fmt(z[1]) + '°';
+  $('zoom-hint').textContent = state.photo === 'lux'
+    ? 'The lux refers to the narrowest zoom. Wider zoom lowers the peak intensity. Without the lux at widest zoom, a typical fall-off is used (flat to ' + C.ZOOM.c + '× the narrowest angle, then angle^−' + C.ZOOM.n1 + ', fitted to 36 fixtures); with it, the result follows the photometric data.'
+    : 'The lumens are spread over the current zoom angle.';
+}
+
+// Reads the form. Returns { error } or the model for the active mode.
+function read() {
+  const need = (ids) => {
+    let ok = true;
+    IDS.forEach(id => $(id).classList.remove('bad'));
+    ids.forEach(([id, min, max, opt]) => {
+      if (opt && blank(id)) return;
+      const v = val(id);
+      if (!isFinite(v) || v < min || (max !== undefined && v > max)) { $(id).classList.add('bad'); ok = false; }
+    });
+    return ok;
+  };
+  const r = val('r'), t = val('t');
+  const common = [['r', 0.01, 1e5], ['t', 1e-6, 3e4], ['pct', 1e-6, 100]];
+  const dim = val('pct') / 100;
+  if (state.mode === 'laser') {
+    const req = [['a', 0.01], ['phi', 0.001, 3000], ['nm1', 400, 700], ['nm2', 400, 700], ['nm3', 400, 700], ['p1', 0], ['p2', 0], ['p3', 0], ['lens', -1000, 1000, true]];
+    if ($('percol').checked) [1, 2, 3].forEach(i => req.push(['a' + i, 0.01, 1e3, true], ['phi' + i, 0.001, 3000, true]));
+    if (state.beam === 'scan') {
+      req.push(['sfail', 0, 1e4]);
+      if (state.skind === 'measured') req.push(['mtp', 0.001, 1e6], ['mrate', 0.01, 1e7]);
+      else {
+        req.push(['spps', 0.01, 1e4], ['spts', 1, 1e6], ['srep', 1, 1e3], ['sbeams', 1, 1e3]);
+        if ($('spat').value === 'dots') req.push(['sdot', 1, 1e6]); else req.push(['sang', 0.01, 360], ['sanch', 0, 1e5]);
+      }
+    }
+    if (!need(req.concat(common))) return { error: 'Some inputs are missing or out of range (marked red).' + (['nm1', 'nm2', 'nm3'].some(id => $(id).classList.contains('bad')) ? ' Wavelengths must be 400 to 700 nm.' : '') };
+    if (state.beam === 'scan' && state.skind === 'pattern' && $('spat').value === 'dots' && val('sdot') > val('spts')) {
+      $('sdot').classList.add('bad'); return { error: 'A dot cannot have more points than the whole frame.' };
+    }
+    const lines = [1, 2, 3].map(i => {
+      const ln = { nm: val('nm' + i), p: val('p' + i) / 1000 * dim };
+      if ($('percol').checked) { if (!blank('a' + i)) ln.a = val('a' + i) / 1000; if (!blank('phi' + i)) ln.phi = val('phi' + i) / 1000; }
+      return ln;
+    }).filter(l => l.p > 0);
+    if (!lines.length) return { error: 'Enter the power of at least one colour.' };
+    const defA = $('defA').value, defPhi = $('defPhi').value;
+    const phi0 = val('phi') / 1000, a0 = val('a') / 1000;
+    // optional diverging lens in front of the aperture; the sign does not matter (-2 and 2 mean the same lens)
+    const dpt = blank('lens') ? 0 : Math.abs(val('lens'));
+    const L = { lines, a: a0, phi: phi0, kA: C.DEF_GAUSS[defA], kPhi: C.DEF_GAUSS[defPhi], fA: C.DEF_FLAT[defA], fPhi: C.DEF_FLAT[defPhi],
+      profile: $('prof').value, dpt, ed: $('ed').value, scan: null, failT: val('sfail') / 1000 };
+    if (state.beam === 'scan') {
+      L.scan = state.skind === 'measured' ? { kind: 'measured', tp: val('mtp') * 1e-6, rate: val('mrate') }
+        : { kind: 'pattern', pattern: $('spat').value, angle: val('sang') * Math.PI / 180, pps: val('spps') * 1000, points: val('spts'),
+          anchors: val('sanch'), k: Math.round(val('srep')), g: $('spat').value === 'dots' ? 1 : Math.round(val('sbeams')), dotPoints: val('sdot') };
+    }
+    const wide = Math.hypot(L.kPhi * phi0, L.kA * a0 * dpt) / L.kPhi;
+    $('red-hint').textContent = dim < 1 || dpt > 0
+      ? 'Calculated with ' + fmt(lines.reduce((s, l) => s + l.p, 0) * 1000) + ' mW' + (dpt > 0 ? ' and a −' + fmt(dpt) + ' dpt lens, which widens the beam to about ' + fmt(wide * 1000) + ' mrad (same definition as the divergence)' : '') + '.'
+      : 'Leave at 100 % and blank to calculate the laser as it is. Diverging lenses only; measure the scan angle after the lens.';
+    return { r, t, L };
+  }
+  const eng = $('eng').value;
+  const req = [['dsrc', 1]].concat(eng === 'rgb' ? [] : [['cct', 1800, 20000]])
+    .concat(state.photo === 'lux' ? [['lux', 1e-3], ['luxd', 0.1]] : [['lm', 1e-3]]).concat([['pwm', 0, 1e7, true], ['zmin', 0.1, 180, true], ['zmax', 0.1, 180, true], ['luxw', 0, 1e9, true]]);
+  // Beam angle: needed for lumens, optional for lux unless it is negative (a beam that crosses over).
+  const ang = val('bang'), angOk = isFinite(ang) && Math.abs(ang) >= 0.1 && Math.abs(ang) <= 180;
+  const cross = angOk && ang < 0;
+  $('xorow').classList.toggle('hidden', !cross);
+  let ok = need(req.concat(common));
+  if (!angOk && (state.photo === 'lm' || !blank('bang'))) { $('bang').classList.add('bad'); ok = false; }
+  const dlens = val('dsrc') / 1000, w = val('wxo') / 1000;
+  if (cross && !(w >= 0.001 && w < dlens)) { $('wxo').classList.add('bad'); ok = false; }
+  if (!blank('zmin') && !blank('zmax') && !(val('zmax') > val('zmin'))) { $('zmax').classList.add('bad'); ok = false; }
+  if (!ok) return { error: 'Some inputs are missing or out of range (marked red).' + (cross ? ' The crossover diameter must be smaller than the front lens.' : '') };
+  const rad = Math.abs(ang) * Math.PI / 180;
+  if (state.photo === 'lm' && rad < 4 * Math.PI / 180) {
+    $('bang').classList.add('bad');
+    return { error: 'Below 4° beam angle, lumens do not give the peak intensity reliably (published beam fixtures range from 0.3 to 5 times the even-spread estimate). Enter lux at a distance from the photometric sheet or a measurement; candela = lux at 1 m.' };
+  }
+  const sp = C.engine(eng, val('cct'));
+  const G = cross ? { dsrc: w, xo: C.crossover(dlens, w, rad), dlens } : { dsrc: dlens, xo: 0, dlens, cap: angOk ? Math.tan(rad / 2) * 1.2 : 0 };
+  if (cross) $('xo-hint').textContent = 'The beam crosses over ' + fmtLen(G.xo) + ' in front of the lens. From there on the eye sees the crossover, not the lens, as the source.';
+  // Photometric tables are peak intensity divided by distance² from the front lens, crossover beams included.
+  let I = state.photo === 'lux' ? C.intensityFromLux(val('lux'), val('luxd')) : C.intensityFromLumens(val('lm'), rad);
+  const zr = zoomRange();
+  let zoom = null;
+  if (zr && !cross) {
+    if (!(ang >= zr[0] * (1 - 1e-9) && ang <= zr[1] * (1 + 1e-9))) { $('bang').classList.add('bad'); return { error: 'The beam angle is outside the zoom range.' }; }
+    if (state.photo === 'lux') {
+      const pts = [[zr[0], I]];
+      if (!blank('luxw')) {
+        const lw = val('luxw');
+        if (!(lw > 0 && lw <= val('lux'))) { $('luxw').classList.add('bad'); return { error: 'The lux at widest zoom must be above 0 and not above the lux at narrowest zoom.' }; }
+        pts.push([zr[1], C.intensityFromLux(lw, val('luxd'))]);
+      }
+      zoom = { ref: zr[0], Iref: I, points: pts.length };
+      I = C.zoomIntensity(pts, ang);
+    }
+  }
+  const pwm = blank('pwm') ? 0 : val('pwm');
+  const M = Object.assign({ I: I * dim, Ifull: I, peak: +$('peak').value, std: $('lstd').value, pwm, duty: dim, zoom,
+  }, sp, G);
+  convert(I, angOk ? rad : NaN);
+  $('red-hint').textContent = (dim < 1 ? 'Calculated with ' + fmt(M.I / 1e6) + ' Mcd peak intensity' + (pwm ? ', PWM pulses at full brightness.' : ', taken as current dimming (no PWM frequency).') : 'Leave at 100 % to calculate the fixture at full output.') +
+    ' Never model a colour with the dimmer: a colour lowers the lux far more than the hazard.';
+  return { r, t, M };
+}
+
+// Fills the pair the user did not enter: lumens from lux (needs a beam angle) or lux from lumens (needs a distance).
+function convert(I, rad) {
+  const round = x => String(Number(x.toPrecision(3)));
+  if (state.photo === 'lux') $('lm').value = isFinite(rad) ? round(I * 2 * Math.PI * (1 - Math.cos(rad / 2))) : '';
+  else {
+    const d = val('luxd'), ok = isFinite(d) && d >= 0.1;
+    $('luxd').classList.toggle('bad', !ok);
+    $('lux').value = ok ? round(I / (d * d)) : '';
+  }
+}
+
+// ---------- presets ----------
+const PRESETS = window.MPE_PRESETS || { laser: [], light: [] };
+let preset = null;
+function option(sel, value, text) { const o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o); }
+function fillManufacturers() {
+  const sel = $('pmfr'); sel.textContent = '';
+  option(sel, '', 'Custom (no preset)');
+  Array.from(new Set(PRESETS[state.mode].map(p => p.mfr))).sort().forEach(m => option(sel, m, m));
+  preset = null;
+  fillModels();
+}
+function fillModels() {
+  const sel = $('pmodel'), mfr = $('pmfr').value; sel.textContent = '';
+  option(sel, '', mfr ? 'Choose a model' : '');
+  PRESETS[state.mode].forEach((p, i) => { if (p.mfr === mfr) option(sel, i, p.model); });
+  sel.disabled = !mfr;
+  preset = null;
+  $('pnote').textContent = mfr ? '' : 'Pick a manufacturer and model to fill in data sheet values, then adjust them to your unit.';
+}
+function applyPreset() {
+  const p = PRESETS[state.mode][$('pmodel').value];
+  if (!p) { preset = null; return; }
+  preset = p;
+  // a value the data sheet does not give is blanked, so nothing is left over from the previous fixture
+  const set = (id, v) => { const ok = v !== null && v !== undefined; $(id).value = ok ? v : ''; return ok; };
+  const missing = [];
+  $('pct').value = 100;
+  if (state.mode === 'laser') {
+    [1, 2, 3].forEach(i => { set('nm' + i, p.nm[i - 1]); $('p' + i).value = p.mw[i - 1] || 0; set('a' + i, null); set('phi' + i, null); });
+    $('percol').checked = false; $('prof').value = 'multimode'; $('lens').value = '';
+    if (!set('a', p.a)) missing.push('beam diameter');
+    if (!set('phi', p.phi)) missing.push('divergence');
+    $('defA').value = p.defA || 'e2'; $('defPhi').value = p.defPhi || 'e2';
+  } else {
+    if (p.lux && p.luxd) { setSeg('photo', 'lux'); set('lux', p.lux); set('luxd', p.luxd); }
+    else if (p.lm && p.bang) { setSeg('photo', 'lm'); set('lm', p.lm); }
+    else missing.push('light output');
+    if (!set('bang', p.bang)) missing.push('beam angle');
+    set('zmin', p.zmin); set('zmax', p.zmax); set('luxw', p.luxw);
+    if (!set('dsrc', p.dsrc)) missing.push('front lens diameter');
+    $('eng').value = p.eng || 'led';
+    if (!set('cct', p.cct) && p.eng !== 'rgb') missing.push('colour temperature');
+    if (p.wxo) set('wxo', p.wxo);
+    $('pwm').value = p.pwm || '';
+    $('peak').value = '1.5';
+  }
+  const note = $('pnote'); note.textContent = '';
+  note.append('Data sheet values for the ' + p.mfr + ' ' + p.model + '. ' + (p.note ? p.note + ' ' : '') +
+    (p.lux && p.lm ? 'Data sheet output: ' + fmt(p.lm) + ' lm. ' : '') +
+    (missing.length ? 'Not in the data sheet, enter it yourself: ' + missing.join(', ') + '. ' : ''));
+  if (/^https:\/\//.test(p.src || '')) {
+    const a = document.createElement('a'); a.href = p.src; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Source';
+    note.append(a);
+  }
+  render();
+}
+
+// ---------- output ----------
+function pill(hr, okText, badText) {
+  const k = hr > 1 ? 'critical' : hr > 0.5 ? 'warning' : 'good';
+  const txt = hr > 1 ? (badText || 'Above the limit') : hr > 0.5 ? (okText ? okText + ', little margin' : 'Below, little margin') : (okText || 'Below the limit');
+  return '<span class="pill ' + k + '">' + ICON[k] + txt + '</span>';
+}
+const HELP = [
+  [/^Exposure at/, 'How much light reaches the eye, as a multiple of the maximum permissible exposure (MPE) for the exposure time. Above 1× the exposure can injure the eye. Irradiance is averaged over a 7 mm pupil, as the standard prescribes. With scanning it is the worst spot of the pattern.'],
+  [/^Hazard distance \(NOHD\)/, 'Nominal ocular hazard distance: closer than this, the beam exceeds the MPE for the exposure time. Beyond it the beam is eye-safe (it can still dazzle). With scanning, the static value shows what happens if the scanners stop.'],
+  [/^Needed reduction/, 'How far the output must be turned down, as a share of full power, so the exposure at this distance meets the MPE. The factor and OD (optical density) give the same as an attenuation from full power; an OD filter must reach it at every wavelength in use.'],
+  [/^Diverging lens needed/, 'Power of a diverging lens on the laser\'s own beam that spreads it enough to meet the MPE at this distance, at the power set above. Lenses in contact add their dioptres.'],
+  [/^Beam with that lens/, 'The full divergence of the beam with that lens fitted, and its width at this distance.'],
+  [/^Longest exposure/, 'How long a static beam may rest on the eye at this distance before it exceeds the MPE.'],
+  [/^MPE for/, 'The limit itself for this exposure time and colour mix: irradiance averaged over a 7 mm pupil, also given as power into the pupil. The thermal limit applies to all colours; from 10 s blue and green also have a photochemical limit, and the lower one counts.'],
+  [/^Beam at/, 'Beam diameter at this distance, shown as the 1/e² width of a Gaussian beam with the same second moment. Multimode beams look sharper-edged, but carry the same power.'],
+  [/^Worst spot/, 'The spot of the scanned pattern with the highest exposure: a line crossing, a line end where the beam stops and turns, or a beam dot. Shown are its pulse duration, how often it is hit, the multiple-pulse factor C5 and which rule governs.'],
+  [/^Line crossing|^Line end|^Beam dot|^Measured pulse/, 'The other spots of the pattern and their exposure, so you can see which part of the pattern needs attention.'],
+  [/^Frame rate/, 'Frames per second from scan rate ÷ points per frame, and the speed at which the beam sweeps across the audience at this distance.'],
+  [/^If the scanners stop/, 'Exposure if the scanners fail and the beam stands still on the eye for the scan-fail reaction time. Above 1× the scanned result is only safe with a scan-fail safeguard that is faster than this.'],
+  [/^Industry rule of thumb/, 'ILDA / Pangolin practice for audience scanning: at most 10 mW/cm² for the beam at the audience and no pulse longer than 1 ms. Useful as a sanity check; it is not a standard and can be less strict than the MPE.'],
+  [/^Risk group at/, 'Photobiological risk group at this distance for a 0.25 s look (the RG2/RG3 boundary). RG2 or lower is acceptable for an audience, RG3 is not.'],
+  [/^Hazard distance \(RG3\)/, 'Closer than this the fixture is risk group 3 for a 0.25 s look. This is the distance a manufacturer would state as the hazard distance under the selected standard.'],
+  [/^Needed dimming/, 'How far the fixture must be dimmed so that this distance is risk group 2 or lower. With a PWM frequency, the pulses at full brightness are checked as well, which can need much deeper dimming.'],
+  [/^Staring for/, 'Exposure for someone looking into the fixture for the staring time, as a multiple of the limit for that time (retinal thermal or blue light).'],
+  [/^Longest stare/, 'How long someone can look into the lens at this distance before the exposure limit is reached.'],
+  [/^Light at/, 'Illuminance on the eye at this distance, compared with full sunlight.'],
+  [/^Peak intensity/, 'Peak luminous intensity of the beam in megacandela, at the current zoom and dimmer, and the mean luminance of the lens (or crossover) that the eye sees as the source.'],
+  [/^Source size/, 'Angle the lit lens fills as seen from this distance. Sources smaller than the averaging angle count as small sources, where the hazard depends only on the light reaching the eye.'],
+  [/^Light engine/, 'Spectral constants of the selected light engine: lumens per R-weighted watt for the retinal thermal hazard and blue-light-weighted watts per lumen. These turn lux into hazard.'],
+  [/^PWM pulses/, 'With PWM dimming each pulse runs at full brightness. This is the exposure of one pulse against the repetitive-pulse limit.'],
+  [/^Beam crossover/, 'With a negative beam angle the beam narrows to a crossover in front of the fixture. The exposure is highest around there.'],
+];
+function tile(label, value, unit, sub, extra) {
+  const h = HELP.find(([re]) => re.test(label));
+  const help = h ? '<button class="help" type="button" aria-label="What is this?">?</button><div class="helptip" role="tooltip">' + h[1] + '</div>' : '';
+  return '<div class="card tile"><div class="label"><span>' + label + '</span>' + help + '</div><div class="pillrow">' + (extra || '') + '</div>' +
+    '<div class="value">' + value + (unit ? '<small>' + unit + '</small>' : '') + '</div>' +
+    '<div class="sub" title="' + esc(String(sub || '').replace(/<[^>]*>/g, '')) + '">' + (sub || '&nbsp;') + '</div></div>';
+}
+// Dazzle distance (NODD) per dazzle level and ambient light. nodd(mde) returns metres; distances
+// inside the eye-hazard distance are marked, because the injury limit governs there.
+function dazzleTable(nodd, hazard, hazardName) {
+  const cell = (mde) => {
+    const x = nodd(mde);
+    return '<td>' + (x === 0 ? 'none' : isFinite(x) ? fmtDist(x, 1).join(' ') : '> 10,000 km') +
+      (x > 0 && x <= hazard ? ' <span class="muted">(inside ' + hazardName + ')</span>' : '') + '</td>';
+  };
+  $('dtbl').innerHTML = '<thead><tr><th>View blocked</th><th>Night</th><th>Dusk or dawn</th><th>Day</th></tr></thead><tbody>' +
+    C.MDE.map(m => '<tr><td>' + m.name + ', ' + m.deg + '° wide</td>' + cell(m.night) + cell(m.dusk) + cell(m.day) + '</tr>').join('') + '</tbody>';
+}
+const tableDistances = r => Array.from(new Set([2, 5, 10, 15, 20, 30, 50, 75, 100, 200, 500, r])).sort((a, b) => a - b);
+const spotName = { 'line crossing': 'Line crossing', 'line end': 'Line end', 'beam dot': 'Beam dot', 'measured pulse': 'Measured pulse' };
+
+function renderLaser(m) {
+  const { r, t, L } = m;
+  const res = C.laserRatio(r, t, L);
+  const pct = val('pct'), pTot = L.lines.reduce((s, l) => s + l.p, 0), pFull = pTot * 100 / pct;
+  const st = C.staticRatio(r, t, L);
+  const mpe = st.e / st.hr;                        // effective MPE for this colour mix, W/m²
+  const nohd = C.laserNOHD(t, L);
+  const Ls = Object.assign({}, L, { scan: null });
+  const nohdStatic = L.scan ? C.laserNOHD(t, Ls) : nohd;
+  const tmax = C.laserMaxTime(r, L);
+  const d63 = C.d63(r, L);
+  const tt = fmtTime(t).join(' ');
+  const out = [];
+
+  out.push(tile('Exposure at ' + fmt(r) + ' m', fmtRatio(res.hr), '× MPE',
+    fmt(st.e) + ' W/m² averaged over a 7 mm pupil' + (L.scan ? ' · worst spot: ' + res.limit : ''), pill(res.hr)));
+  const nd = fmtDist(nohd, 1);
+  out.push(tile('Hazard distance (NOHD)', nohd === 0 ? 'None' : nd[0], nohd === 0 ? '' : nd[1],
+    nohd === 0 ? 'Within the MPE right at the aperture' :
+    L.scan ? 'While scanning, whole pattern. Static beam: ' + fmtDist(nohdStatic, 1).join(' ') : 'Closer than this, ' + tt + ' in the beam exceeds the MPE'));
+  // needed reduction, as a share of full power
+  const pctMax = pct / res.hr;
+  if (pctMax >= 100) out.push(tile('Needed reduction at ' + fmt(r) + ' m', 'None', '', 'Full power is within the limit · headroom ' + down(1 / res.hr) + '×'));
+  else {
+    const fFull = 100 / pctMax;
+    out.push(tile('Needed reduction at ' + fmt(r) + ' m', down(pctMax, pctMax < 1 ? 2 : 3), '% of full',
+      'Max ' + down(pTot * 1000 / res.hr) + ' mW total · from full: factor ' + up(fFull) + ', OD ' + (Math.ceil(Math.log10(fFull) * 100) / 100).toFixed(2) +
+      (res.hr <= 1 ? ' · the current ' + fmt(pct) + ' % is within the limit' : '')));
+  }
+  if (res.hr > 1) {
+    const need = C.laserNeededLens(r, t, Object.assign({}, L, { dpt: 0 }));   // total lens on the laser's own beam
+    if (!isFinite(need)) out.push(tile('Diverging lens needed', 'Not reachable', '', 'No lens spreads the beam enough at ' + fmt(r) + ' m; reduce power'));
+    else {
+      const div = Math.hypot(L.kPhi * L.phi, L.kA * L.a * need) / L.kPhi, full = 2 * Math.atan(div / 2);
+      const practical = full < 0.2 && 1 / need >= 0.02;
+      const dLens = C.d63(r, Object.assign({}, L, { dpt: need })) * Math.SQRT2;
+      out.push(tile('Diverging lens needed', '−' + up(need), 'dpt',
+        'At this power. ' + (L.dpt ? 'Fitted now −' + fmt(L.dpt) + ' dpt; add about −' + up(need - L.dpt) + ' dpt in contact' : 'Focal length −' + fmtLen(1 / need)) +
+        (practical ? '' : ' · beyond a practical lens: reduce power or move the beam')));
+      out.push(tile('Beam with that lens', up(full * 1000), 'mrad', fmtLen(dLens) + ' wide (1/e²) at ' + fmt(r) + ' m · own divergence ' + fmt(L.phi * 1000) + ' mrad'));
+    }
+  } else {
+    out.push(tile('Diverging lens needed', 'None', '', L.dpt ? 'The −' + fmt(L.dpt) + ' dpt lens is enough at ' + fmt(r) + ' m' : 'The beam is already wide enough at ' + fmt(r) + ' m'));
+  }
+  const tm = fmtTime(tmax, -1);
+  out.push(tile('Longest exposure at ' + fmt(r) + ' m', tmax === 0 ? '< 1' : isFinite(tmax) ? tm[0] : '> 8', tmax === 0 ? 'ns' : isFinite(tmax) ? tm[1] : 'h',
+    'Static beam resting on the eye'));
+  out.push(tile('MPE for ' + tt, fmt(mpe), 'W/m²',
+    fmt(mpe / 10) + ' mW/cm² · ' + fmt(mpe * C.A_AP * 1000) + ' mW into a 7 mm pupil · ' + (st.photo > st.thermal ? 'photochemical' : 'thermal') + ' limit'));
+  const dia = d63 * Math.SQRT2;
+  out.push(tile('Beam at ' + fmt(r) + ' m', fmt(dia < 1 ? dia * 100 : dia), dia < 1 ? 'cm' : 'm',
+    'Diameter, 1/e² (Gaussian equivalent) · ' + fmt(pFull) + ' W at full power'));
+  if (L.scan) {
+    const w = res.worst;
+    if (w) {
+      const tp = fmtTime(w.tp);
+      out.push(tile('Worst spot: ' + (spotName[w.name] || w.name), tp[0], tp[1],
+        'pulse · ' + fmt(w.rate) + ' per second · C5 = ' + fmt(w.c5) + ' (pulses in ' + (L.ed === '2007' ? tt : (t > 10 ? '10 s' : tt)) + ') · limited by the ' + (w.single >= w.avg ? 'single pulse' : 'average over ' + tt) + (w.ish1 ? ' · assessed as a 5 µs pulse (IEC 60825-1 ISH1)' : '')));
+      const others = res.spots.filter(s => s !== w);
+      if (others.length) out.push(tile(others.map(s => spotName[s.name]).join(', '), others.map(s => fmtRatio(s.hr)).join(' / '), '× MPE',
+        others.map(s => fmtTime(s.tp).join(' ') + ' pulses, ' + fmt(s.rate) + ' per second').join(' · ')));
+    }
+    if (L.scan.kind === 'pattern') {
+      const f = L.scan.pps / L.scan.points;
+      const om = L.scan.pattern === 'dots' ? 0 : { line2: 2, line1: 1, circle: Math.PI }[L.scan.pattern] * L.scan.angle * (L.scan.k || 1) * f;
+      out.push(tile('Frame rate', fmt(f), 'fps', om ? 'Beam speed ' + fmt(om * r) + ' m/s at ' + fmt(r) + ' m' : fmt(L.scan.dotPoints / L.scan.pps * 1e3) + ' ms per dot'));
+    }
+    const fail = C.staticRatio(r, L.failT, L).hr;
+    out.push(tile('If the scanners stop', fmtRatio(fail), '× MPE', 'Beam resting on the eye for the ' + fmt(L.failT * 1000) + ' ms scan-fail time', pill(fail)));
+    const e7 = st.e / 10, wTp = w ? w.tp : 0;
+    const rot = e7 <= 10 && wTp <= 1e-3;
+    out.push(tile('Industry rule of thumb', rot ? 'Met' : 'Not met', '', 'ILDA/Pangolin: ≤ 10 mW/cm² static and pulses ≤ 1 ms. Here ' + fmt(e7) + ' mW/cm², ' + fmtTime(wTp).join(' ') + '. Not a standard.'));
+  }
+  $('tiles').innerHTML = out.join('');
+  $('tiles').classList.toggle('haspills', true);
+  $('rsub').textContent = fmt(pTot) + ' W, ' + fmt(L.phi * 1000) + ' mrad, ' + tt + (L.scan ? ', scanned' : ', static beam');
+
+  const series = [{ name: L.scan ? 'Static beam' : 'Exposure ÷ MPE', color: 'var(--series-1)', f: x => C.staticRatio(x, t, L).hr }];
+  if (L.scan) series.push({ name: 'Scanned (worst spot)', color: 'var(--series-2)', f: x => C.laserRatio(x, t, L).hr });
+  drawChart(series, r, Math.max(nohd, nohdStatic), 'MPE');
+
+  // dazzle: a resting beam, each colour weighted by how bright it looks; no loss in the air
+  dazzleTable(mde => C.laserNODD(L, mde), nohdStatic, 'NOHD');
+
+  const rows = tableDistances(r).map(x => {
+    const q = C.laserRatio(x, t, L), s = C.staticRatio(x, t, L), allowed = pTot / q.hr;
+    const cell = allowed >= pFull * (1 - 1e-9) ? 'full power' : down(allowed * 1000) + ' mW (' + down(100 * allowed / pFull, 2) + ' %)';
+    return '<tr' + (x === r ? ' class="here"' : '') + '><td>' + fmt(x) + ' m' + (x === r ? '<span class="tag">audience</span>' : '') + '</td><td>' +
+      fmtLen(C.d63(x, L) * Math.SQRT2) + '</td><td>' + fmt(s.e) + '</td><td>' + fmtRatio(s.hr) + '×</td>' +
+      (L.scan ? '<td>' + fmtRatio(q.hr) + '×</td>' : '') + '<td>' + cell + '</td></tr>';
+  });
+  $('tbl').innerHTML = '<thead><tr><th>Distance</th><th>Beam Ø (1/e²)</th><th>W/m² (7 mm)</th><th>' + (L.scan ? 'Static' : 'Exposure') + '</th>' +
+    (L.scan ? '<th>Scanned</th>' : '') + '<th>Allowed power</th></tr></thead><tbody>' + rows.join('') + '</tbody>';
+  $('report').value = reportLaser(r, t, L, res, nohd, nohdStatic);
+}
+
+function renderLight(m) {
+  const { r, t, M } = m;
+  const T0 = 0.25;
+  const res = C.lightRatio(r, T0, M);              // the risk-group verdict: RG2/RG3 boundary
+  const hd = C.lightHazardDistance(T0, M);
+  const tmax = C.lightMaxTime(r, M);
+  const tt = fmtTime(t).join(' ');
+  const stdName = M.std === '2006' ? 'IEC 62471:2006' : 'IEC 62471-5';
+  const out = [];
+
+  out.push(tile('Risk group at ' + fmt(r) + ' m', res.hr > 1 ? 'RG3' : 'RG2 or lower', '',
+    fmtRatio(res.hr) + '× the RG2 limit (' + stdName + ') · ' + res.limit, pill(res.hr, 'Acceptable', 'Not acceptable')));
+  const hdd = fmtDist(hd, 1);
+  out.push(tile('Hazard distance (RG3)', hd === 0 ? 'None' : hdd[0], hd === 0 ? '' : hdd[1], 'Risk group 3 inside this distance (' + stdName + ')'));
+  const duty = C.lightMaxDuty(r, T0, M);
+  out.push(tile('Needed dimming for RG2 at ' + fmt(r) + ' m', duty >= 1 ? 'None' : down(duty * 100, duty < 0.01 ? 2 : 3), duty >= 1 ? '' : '% of full',
+    duty >= 1 ? 'Full output is within RG2 at ' + fmt(r) + ' m' : 'Max ' + down(M.Ifull * duty / 1e6) + ' Mcd' + (M.pwm ? ' · PWM at ' + fmt(M.pwm) + ' Hz' : ' · current dimming')));
+  const rt = C.lightRatio(r, t, M);
+  out.push(tile('Staring for ' + tt + ' at ' + fmt(r) + ' m', fmtRatio(rt.hr), '× limit', 'Limited by the ' + rt.limit, pill(rt.hr)));
+  const tm = fmtTime(tmax, -1);
+  out.push(tile('Longest stare at ' + fmt(r) + ' m', tmax === 0 ? '< 10' : isFinite(tmax) ? tm[0] : '> 8', tmax === 0 ? 'ms' : isFinite(tmax) ? tm[1] : 'h',
+    'Looking into the lens, beam held on the eye'));
+  out.push(tile('Light at ' + fmt(r) + ' m', fmt(res.ev), 'lx', fmt(res.ev / 1.1e5, 2) + '× full sunlight (110,000 lx)'));
+  out.push(tile('Peak intensity', fmt(M.I / 1e6), 'Mcd', (M.zoom ? 'At ' + fmt(val('bang')) + '° zoom; ' + fmt(M.zoom.Iref * M.duty / 1e6) + ' Mcd at ' + fmt(M.zoom.ref) + '° (' + (M.zoom.points > 1 ? 'from ' + M.zoom.points + ' photometric points' : 'typical fall-off') + ') · ' : '') +
+    'Luminance ' + fmt(M.I / (Math.PI * M.dsrc * M.dsrc / 4) / 1e6) + ' Mcd/m² (mean over the ' + (M.xo ? 'crossover' : 'lens') + ')'));
+  const fov = M.std === '2006' ? 1.7 : 11;
+  out.push(tile('Source size at ' + fmt(r) + ' m', fmt(res.alpha * 1000), 'mrad',
+    (res.alpha * 1000 < fov ? 'Smaller' : 'Larger') + ' than the ' + fov + ' mrad averaging angle at 0.25 s'));
+  out.push(tile('Light engine', fmt(M.std === '2006' ? M.KR97 : M.KR13), 'lm/W',
+    'Per R-weighted watt (' + (M.std === '2006' ? 'ICNIRP 1997' : 'ICNIRP 2013') + ') · blue light ' + fmt(M.KB * 1000) + ' mW per lm · thermal ' + fmtRatio(res.thermal) + '× · blue ' + fmtRatio(res.blue) + '×'));
+  if (M.pwm && M.duty < 1) out.push(tile('PWM pulses', fmtRatio(res.pulse), '× pulse limit', fmtTime(M.duty / M.pwm).join(' ') + ' pulses at full brightness, ' + fmt(M.pwm) + ' per second'));
+  if (M.xo) {
+    const x = C.lightRatio(M.xo, T0, M);
+    out.push(tile('Beam crossover', ...fmtDist(M.xo), fmt(x.ev) + ' lx and ' + fmtRatio(x.hr) + '× the RG2 limit there · ' + fmt(M.dsrc * 1000) + ' mm wide'));
+  }
+  $('tiles').innerHTML = out.join('');
+  $('tiles').classList.toggle('haspills', true);
+  $('rsub').textContent = fmt(M.I / 1e6) + ' Mcd, ' + (M.xo ? 'crossover at ' + fmtLen(M.xo) : fmt(M.dsrc * 1000) + ' mm lens') + ', ' + stdName;
+
+  const series = [
+    { name: 'Retinal thermal', color: 'var(--series-1)', f: x => C.lightRatio(x, T0, M).thermal },
+    { name: 'Blue light', color: 'var(--series-2)', f: x => C.lightRatio(x, T0, M).blue },
+  ];
+  if (M.pwm && M.duty < 1) series.push({ name: 'PWM pulse', color: 'var(--warning)', f: x => C.lightRatio(x, T0, M).pulse });
+  drawChart(series, r, hd, 'RG2 limit');
+
+  // dazzle: open white, illuminance at the eye from a beam held on it; no loss in the air
+  dazzleTable(mde => C.lightNODD(M, mde), hd, 'hazard distance');
+
+  const pwmOn = M.pwm && M.duty < 1;
+  const rows = tableDistances(r).map(x => {
+    const q = C.lightRatio(x, T0, M), tx = C.lightMaxTime(x, M), f = fmtTime(tx, -1);
+    return '<tr' + (x === r ? ' class="here"' : '') + '><td>' + fmt(x) + ' m' + (x === r ? '<span class="tag">audience</span>' : '') + '</td><td>' +
+      fmt(q.ev) + '</td><td>' + fmt(q.alpha * 1000) + '</td><td>' + (q.hr > 1 ? 'RG3' : 'RG2 or lower') + '</td><td>' + fmtRatio(q.thermal) + '×</td><td>' + fmtRatio(q.blue) + '×</td><td>' +
+      (pwmOn ? fmtRatio(q.pulse) + '×</td><td>' : '') +
+      (tx === 0 ? '< 10 ms' : isFinite(tx) ? f.join(' ') : '> 8 h') + '</td></tr>';
+  });
+  $('tbl').innerHTML = '<thead><tr><th>Distance</th><th>Lux</th><th>Source mrad</th><th>Risk group</th><th>Thermal</th><th>Blue light</th>' + (pwmOn ? '<th>PWM pulse</th>' : '') + '<th>Longest stare</th></tr></thead><tbody>' +
+    rows.join('') + '</tbody>';
+  $('report').value = reportLight(r, t, M, res, hd);
+}
+
+
+// ---------- text for a risk assessment ----------
+const today = () => new Date().toISOString().slice(0, 10);
+const device = () => preset ? preset.mfr + ' ' + preset.model : '[device, make and model]';
+function reportLaser(r, t, L, res, nohd, nohdStatic) {
+  const tt = fmtTime(t).join(' '), pct = val('pct'), pTot = L.lines.reduce((s, l) => s + l.p, 0);
+  const defName = { e2: '1/e²', e1: '1/e', fwhm: 'FWHM' };
+  const colours = L.lines.map(l => fmt(l.p * 1000 * 100 / pct) + ' mW at ' + fmt(l.nm) + ' nm').join(', ');
+  const std = L.ed === '2007' ? 'IEC 60825-1:2007' : 'IEC 60825-1:2014';
+  const tWhy = t === 0.25 ? 'blink and aversion response, accidental exposure' : t >= 4 && t < 10 ? 'DGUV Information 203-036: at least 4 s per event' : t >= 600 ? 'whole show' : 'deliberate or prolonged viewing';
+  const red = [];
+  if (pct < 100) red.push('output reduced to ' + fmt(pct) + ' % (' + fmt(pTot * 1000) + ' mW total)');
+  if (L.dpt) red.push('diverging lens −' + fmt(L.dpt) + ' dpt fitted');
+  let move = 'Static beam (no scanning).';
+  if (L.scan && L.scan.kind === 'measured') move = 'Scanned beam; measured pulses at the audience: ' + fmtTime(L.scan.tp).join(' ') + ' (FWHM, 7 mm aperture), ' + fmt(L.scan.rate) + ' per second.';
+  else if (L.scan) {
+    const pat = { line2: 'line drawn there and back', line1: 'line drawn one way', circle: 'circle / closed shape', dots: 'beam dots' }[L.scan.pattern];
+    move = 'Scanned across the audience: ' + pat + (L.scan.pattern === 'dots' ? ', ' + fmt(L.scan.dotPoints) + ' points per dot' : ', ' + fmt(L.scan.angle * 180 / Math.PI) + '° wide') +
+      ', ' + fmt(L.scan.pps / 1000) + ' kpps, ' + fmt(L.scan.points) + ' points per frame (' + fmt(L.scan.pps / L.scan.points) + ' fps)' +
+      (L.scan.pattern !== 'dots' && L.scan.pattern !== 'circle' ? ', ' + fmt(L.scan.anchors) + ' anchor points at each line end' : '') +
+      (L.scan.g > 1 ? ', ' + L.scan.g + ' beams on the same path' : '') + '.';
+  }
+  const ok = res.hr <= 1;
+  const lines = [
+    'Laser: ' + device() + ', ' + colours + ', ' + fmt(L.a * 1000) + ' mm / ' + fmt(L.phi * 1000) + ' mrad.' + (red.length ? ' Set to ' + red.join(', ') + '.' : ''),
+    (L.scan ? move.replace('Scanned across the audience: ', 'Scanned: ') : 'Static beam.') + ' ' + std + ', ' + tt + ' exposure.',
+    'At ' + fmt(r) + ' m: ' + fmtRatio(res.hr) + '× MPE, ' + (ok ? 'within the limit.' : 'NOT within the limit.') +
+      ' NOHD ' + (nohd === 0 ? 'none' : fmtDist(nohd, 1).join(' ')) + (L.scan ? ' (static beam ' + fmtDist(nohdStatic, 1).join(' ') + ')' : '') + '.',
+  ];
+  if (!ok) {
+    const pctMax = pct / res.hr, need = C.laserNeededLens(r, t, Object.assign({}, L, { dpt: 0 }));
+    lines.push('Needed: max ' + down(pctMax, pctMax < 1 ? 2 : 3) + ' % of full power (' + down(pTot * 1000 / res.hr) + ' mW)' + (isFinite(need) ? ' or a −' + up(need) + ' dpt lens' : '') + '.');
+  }
+  if (L.scan) {
+    const fail = C.staticRatio(r, L.failT, L).hr;
+    if (fail > 1) lines.push('Scan-fail safeguard required: a stopped beam reaches ' + fmtRatio(fail) + '× MPE within ' + fmt(L.failT * 1000) + ' ms.');
+  }
+  return lines.join('\n');
+}
+function reportLight(r, t, M, res, hd) {
+  const stdName = M.std === '2006' ? 'IEC 62471:2006 / EN 62471' : 'IEC 62471-5';
+  const duty = C.lightMaxDuty(r, 0.25, M);
+  const ok = res.hr <= 1;
+  const photo = state.photo === 'lux' ? val('lux').toLocaleString('en-US') + ' lx at ' + fmt(val('luxd')) + ' m' : fmt(val('lm')) + ' lm';
+  const lines = [
+    'Moving light: ' + device() + ', ' + photo + (zoomRange() ? ', zoom ' + fmt(val('bang')) + '°' : '') +
+      (M.duty < 1 ? ', dimmed to ' + fmt(M.duty * 100) + ' %' + (M.pwm ? ' (PWM ' + fmt(M.pwm) + ' Hz)' : '') : '') + '. ' + stdName + '.',
+    'At ' + fmt(r) + ' m: ' + (ok ? 'risk group 2 or lower, acceptable' : 'risk group 3, NOT acceptable') + ' (' + fmtRatio(res.hr) + '× the RG2 limit).' +
+      ' Hazard distance ' + (hd === 0 ? 'none' : fmtDist(hd, 1).join(' ')) + '.',
+  ];
+  if (!ok) lines.push('Needed: dim to max ' + down(duty * 100, duty < 0.01 ? 2 : 3) + ' %' + (zoomRange() ? ', zoom wider' : '') + ' or keep ' + fmtDist(hd, 1).join(' ') + ' from the audience.');
+  return lines.join('\n');
+}
+
+// ---------- chart: exposure / limit over distance, log-log ----------
+let chartState = null;
+function drawChart(series, r, hd, limitName) {
+  chartState = { series, r, hd, limitName };
+  const svg = $('svg');
+  const W = svg.clientWidth || 600, H = 300, m = { l: 46, r: 16, t: 14, b: 30 };
+  const x0 = Math.min(1, r / 2);
+  const x1 = Math.min(1e6, Math.max(100, r * 3, isFinite(hd) ? hd * 3 : 1e6));
+  const lx0 = Math.log10(x0), lx1 = Math.log10(x1);
+  const n = 160, pts = series.map(() => []);
+  let lo = 1, hi = 1;
+  for (let i = 0; i <= n; i++) {
+    const x = Math.pow(10, lx0 + (lx1 - lx0) * i / n);
+    series.forEach((s, k) => { const y = Math.max(s.f(x), 1e-12); pts[k].push([x, y]); lo = Math.min(lo, y); hi = Math.max(hi, y); });
+  }
+  let ly0 = Math.floor(Math.log10(lo) - 0.15), ly1 = Math.ceil(Math.log10(hi) + 0.15);
+  ly0 = Math.max(ly0, ly1 - 8);
+  if (ly1 - ly0 < 2) { ly0 = Math.min(ly0, -1); ly1 = Math.max(ly1, 1); }
+  const px = x => m.l + (Math.log10(x) - lx0) / (lx1 - lx0) * (W - m.l - m.r);
+  const py = y => m.t + (ly1 - Math.max(Math.log10(y), ly0)) / (ly1 - ly0) * (H - m.t - m.b);
+  const pow = e => e >= -3 && e <= 4 ? fmt(Math.pow(10, e), 1) : '10' + String(e).replace(/[-0-9]/g, c => '⁻⁰¹²³⁴⁵⁶⁷⁸⁹'['-0123456789'.indexOf(c)]);
+  let s = '';
+  const stepY = Math.ceil((ly1 - ly0) / 6);
+  for (let e = ly0; e <= ly1; e += stepY) {
+    s += '<line class="gridline" x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + py(Math.pow(10, e)) + '" y2="' + py(Math.pow(10, e)) + '"/>' +
+      '<text class="axis" x="' + (m.l - 8) + '" y="' + (py(Math.pow(10, e)) + 3.5) + '" text-anchor="end">' + pow(e) + '×</text>';
+  }
+  for (let e = Math.ceil(lx0); e <= Math.floor(lx1); e++) {
+    const X = px(Math.pow(10, e));
+    s += '<line class="gridline" x1="' + X + '" x2="' + X + '" y1="' + m.t + '" y2="' + (H - m.b) + '"/>' +
+      '<text class="axis" x="' + X + '" y="' + (H - m.b + 16) + '" text-anchor="middle">' + (e >= 3 ? fmt(Math.pow(10, e - 3), 1) + ' km' : fmt(Math.pow(10, e), 1) + ' m') + '</text>';
+  }
+  // zone above the limit and the limit line
+  const yl = py(1);
+  s += '<rect x="' + m.l + '" y="' + m.t + '" width="' + (W - m.l - m.r) + '" height="' + Math.max(0, yl - m.t) + '" fill="var(--critical)" opacity=".08"/>' +
+    '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + yl + '" y2="' + yl + '" stroke="var(--text-secondary)" stroke-width="1"/>' +
+    '<text class="note" x="' + (W - m.r - 4) + '" y="' + (yl - 6) + '" text-anchor="end">' + limitName + ' (1×)</text>';
+  // audience distance
+  const xr = px(r);
+  s += '<line x1="' + xr + '" x2="' + xr + '" y1="' + m.t + '" y2="' + (H - m.b) + '" stroke="var(--text-muted)" stroke-width="1"/>' +
+    '<text class="note" x="' + (xr + 6) + '" y="' + (m.t + 10) + '">Audience, ' + fmt(r) + ' m</text>';
+  series.forEach((sr, k) => {
+    s += '<path d="M' + pts[k].map(p => px(p[0]).toFixed(1) + ' ' + py(p[1]).toFixed(1)).join('L') + '" fill="none" stroke="' + sr.color +
+      '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  });
+  series.forEach(sr => {
+    s += '<circle cx="' + xr + '" cy="' + py(Math.max(sr.f(r), 1e-12)) + '" r="5" fill="' + sr.color + '" stroke="var(--surface-1)" stroke-width="2"/>';
+  });
+  s += '<line id="cross" class="hidden" y1="' + m.t + '" y2="' + (H - m.b) + '" stroke="var(--text-muted)" stroke-width="1"/>' +
+    '<rect id="hit" x="' + m.l + '" y="' + m.t + '" width="' + (W - m.l - m.r) + '" height="' + (H - m.t - m.b) + '" fill="transparent"/>';
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.innerHTML = s;
+  $('legend').innerHTML = series.length > 1 ? series.map(sr => '<span><i style="background:' + sr.color + '"></i>' + esc(sr.name) + '</span>').join('') : '';
+  $('ctitle').textContent = 'Exposure as a multiple of the ' + (limitName === 'MPE' ? 'MPE' : limitName === 'RG2 limit' ? 'RG2 limit (0.25 s look)' : 'limit');
+
+  const hit = $('hit'), cross = $('cross'), tip = $('tip');
+  hit.addEventListener('pointermove', ev => {
+    const box = svg.getBoundingClientRect();
+    const X = (ev.clientX - box.left) * W / box.width;
+    const x = Math.pow(10, lx0 + (X - m.l) / (W - m.l - m.r) * (lx1 - lx0));
+    cross.setAttribute('x1', X); cross.setAttribute('x2', X); cross.classList.remove('hidden');
+    tip.innerHTML = '<div class="t">' + fmtDist(x).join(' ') + '</div>' + series.map(sr =>
+      '<div class="r"><i style="background:' + sr.color + '"></i><b>' + fmt(sr.f(x)) + '×</b><span>' + esc(sr.name) + '</span></div>').join('');
+    tip.classList.remove('hidden');
+    const cb = $('chart').getBoundingClientRect();
+    const left = ev.clientX - cb.left + 14;
+    tip.style.left = (left + tip.offsetWidth > cb.width - 8 ? left - tip.offsetWidth - 28 : left) + 'px';
+    tip.style.top = Math.max(8, ev.clientY - cb.top - 20) + 'px';
+  });
+  hit.addEventListener('pointerleave', () => { cross.classList.add('hidden'); tip.classList.add('hidden'); });
+}
+
+function render() {
+  syncVisibility();
+  const m = read();
+  $('err').classList.toggle('hidden', !m.error);
+  $('out').classList.toggle('hidden', !!m.error);
+  if (m.error) { $('errmsg').textContent = m.error; $('rsub').textContent = ''; return; }
+  if (state.mode === 'laser') renderLaser(m); else renderLight(m);
+  save();
+}
+
+// ---------- wiring ----------
+IDS.forEach(id => { DEFAULTS[id] = $(id).value; $(id).addEventListener('input', render); $(id).addEventListener('change', render); });
+CHECKS.forEach(id => { DEFAULTS[id] = $(id).checked; $(id).addEventListener('change', render); });
+SEGS.forEach(id => $(id).addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  setSeg(id, b.dataset.v);
+  if (id === 'mode') fillManufacturers();
+  render();
+}));
+$('zoom').addEventListener('input', () => {
+  const z = zoomRange(); if (!z) return;
+  const a = z[0] * Math.pow(z[1] / z[0], val('zoom') / 1000);
+  $('bang').value = a < 10 ? a.toFixed(2).replace(/0$/, '') : a.toFixed(1);
+  render();
+});
+$('copyrep').addEventListener('click', async () => {
+  const b = $('copyrep');
+  try { await navigator.clipboard.writeText($('report').value); } catch (e) { $('report').select(); document.execCommand('copy'); }
+  b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy text'; }, 1500);
+});
+$('share').addEventListener('click', async () => {
+  const b = $('share'), url = location.href.split('#')[0] + '#' + shareHash();
+  try { await navigator.clipboard.writeText(url); b.textContent = 'Link copied'; } catch (e) { prompt('Copy this link:', url); }
+  setTimeout(() => { b.textContent = 'Share link'; }, 1500);
+});
+$('pmfr').addEventListener('change', fillModels);
+$('pmodel').addEventListener('change', applyPreset);
+$('tpre').addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  $('t').value = b.dataset.v; render();
+});
+function resetForm() {
+  state.keep = { pct: { laser: '100', light: '100' }, t: { laser: '0.25', light: '10' } };
+  load(Object.assign({ beam: 'static', skind: 'pattern', photo: 'lux' }, DEFAULTS, { t: state.keep.t[state.mode] }));
+  $('pmfr').value = ''; fillModels();
+  render();
+}
+$('clear').addEventListener('click', resetForm);
+window.addEventListener('resize', () => { if (chartState && !$('out').classList.contains('hidden')) drawChart(chartState.series, chartState.r, chartState.hd, chartState.limitName); });
+let saved = null;
+try { saved = readHash(); if (saved) load(saved); } catch (e) { /* ignore */ }
+fillManufacturers();
+if (saved && saved.preset && saved.preset.mode === state.mode && PRESETS[state.mode][saved.preset.idx]) {   // restore the preset link, not its values
+  const p = PRESETS[state.mode][saved.preset.idx];
+  $('pmfr').value = p.mfr; fillModels(); $('pmodel').value = saved.preset.idx; preset = p;
+  $('pnote').textContent = 'Preset: ' + p.mfr + ' ' + p.model + (p.note ? '. ' + p.note : '');
+}
+render();
+})();
+</script>
+</body>
+</html>
