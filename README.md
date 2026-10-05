@@ -1,5 +1,7 @@
 # MPE Calculator
 
+**▶ Open the calculator: [greatmastix.github.io/MPECalculator](https://greatmastix.github.io/MPECalculator/)**
+
 Eye-safety calculator for **show lasers** and **high-power moving lights**. It works out the maximum permissible exposure, hazard distances and the reduction needed at the audience, from data-sheet or measured values. It runs entirely in the browser: no server, no cookies, no tracking. The whole calculation lives in the page address, so a link reproduces it exactly.
 
 ## What it calculates
@@ -26,8 +28,6 @@ Eye-safety calculator for **show lasers** and **high-power moving lights**. It w
 ## Using it
 
 Open `index.html` in a browser, or serve the folder with any static web server. There is no build step and nothing to install. To share a calculation, use **Share link** or copy the address.
-
-Live version: https://greatmastix.github.io/MPECalculator/ (published with GitHub Pages, see `.github/workflows/pages.yml`).
 
 ## How results relate to reality
 
