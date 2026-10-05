@@ -27,7 +27,7 @@ Eye-safety calculator for **show lasers** and **high-power moving lights**. It w
 
 Open `index.html` in a browser, or serve the folder with any static web server. There is no build step and nothing to install. To share a calculation, use **Share link** or copy the address.
 
-The page is published with GitHub Pages from this repository (see `.github/workflows/pages.yml`).
+Live version: https://greatmastix.github.io/MPECalculator/ (published with GitHub Pages, see `.github/workflows/pages.yml`).
 
 ## How results relate to reality
 
