@@ -76,6 +76,7 @@ input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-app
 input:focus, select:focus, .btn:focus-visible, .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 input.bad { border-color: var(--critical); }
 input[readonly] { background: var(--surface-1); color: var(--text-secondary); border-style: dashed; }
+.locked { opacity: .55; cursor: not-allowed; }
 .calc-tag { font-size: 11px; background: var(--accent-soft); color: var(--accent-strong); padding: 0 6px; border-radius: 999px; margin-left: 4px; }
 #in-laser, #in-light { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
 select:disabled { opacity: .5; }
@@ -154,6 +155,8 @@ tr.here td { background: var(--surface-2); }
 .warn { display: flex; gap: 10px; padding: 12px 16px; margin-bottom: 12px; font-size: 13px; color: var(--text-secondary); }
 .warn svg { width: 16px; height: 16px; flex: none; color: var(--warning); margin-top: 2px; }
 .warn b { color: var(--text-primary); }
+#preset h3 { display: flex; align-items: center; }
+.unlock { margin: -4px 0 -4px auto; padding: 3px 10px; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
 h2 .clear { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 500; padding: 4px 12px; font-size: 12.5px; color: var(--text-secondary); }
 .chk { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); margin: 2px 0 10px; cursor: pointer; }
 .chk input { width: 15px; height: 15px; accent-color: var(--accent); margin: 0; }
@@ -178,6 +181,7 @@ select:disabled, input:disabled { opacity: .5; }
     <div class="seg big" id="mode" role="group" aria-label="Source type">
       <button data-v="laser" aria-pressed="true">Show laser</button>
       <button data-v="light" aria-pressed="false">Moving light</button>
+      <button data-v="projector" aria-pressed="false">Projector</button>
     </div>
   </header>
 
@@ -187,7 +191,7 @@ select:disabled, input:disabled { opacity: .5; }
       <h2>Inputs <button class="btn clear" id="clear" type="button" title="Reset every input to its default">Clear</button></h2>
       <div class="card form">
         <div id="preset">
-          <h3>Preset</h3>
+          <h3>Preset <button class="btn unlock hidden" id="unlock" type="button"></button></h3>
           <div class="row">
             <div class="field"><label for="pmfr">Manufacturer</label><select id="pmfr"></select></div>
             <div class="field"><label for="pmodel">Model</label><select id="pmodel" disabled></select></div>
@@ -291,12 +295,31 @@ select:disabled, input:disabled { opacity: .5; }
         </div>
 
         <div id="in-light" class="hidden">
-          <h3>Light output</h3>
-          <div class="field"><span class="lbl">I know the</span></div>
-          <div class="row one"><div class="seg" id="photo" role="group" aria-label="Known photometric data">
+          <h3 id="in-light-title">Light output</h3>
+          <div class="field" id="photo-lbl"><span class="lbl">I know the</span></div>
+          <div class="row one" id="photo-row"><div class="seg" id="photo" role="group" aria-label="Known photometric data">
             <button data-v="lux" aria-pressed="true">Lux at a distance</button>
             <button data-v="lm" aria-pressed="false">Lumens and beam angle</button>
           </div></div>
+          <div id="photo-proj" class="hidden">
+            <div class="row">
+              <div class="field"><label for="plm">Brightness</label><div class="unit"><input type="number" id="plm" value="20000" min="0"><span>ANSI lm</span></div></div>
+              <div class="field"><label for="asp">Native chip aspect ratio</label>
+                <select id="asp"><option value="1.6">16:10 (WUXGA)</option><option value="1.7778">16:9</option><option value="1.8963">17:9 (4K DCI)</option><option value="1.3333">4:3</option></select></div>
+            </div>
+            <div class="row one">
+              <div class="field"><label for="plens">Lens</label><select id="plens"><option value="">Custom throw ratio</option></select></div>
+            </div>
+            <div class="row">
+              <div class="field"><label for="trmin">Throw ratio, wide</label><div class="unit"><input type="number" id="trmin" value="1.7" min="0" step="0.01"><span>:1</span></div></div>
+              <div class="field"><label for="trmax">Throw ratio, tele</label><div class="unit"><input type="number" id="trmax" value="2.4" min="0" step="0.01"><span>:1</span></div></div>
+            </div>
+            <div class="zoomhead"><span>Zoom (throw ratio)</span><b id="trval"></b></div>
+            <input type="range" id="trzoom" min="0" max="1000" step="1" value="1000" aria-label="Throw ratio">
+            <div class="zoomends"><span id="trlo"></span><span id="trhi"></span></div>
+            <input type="hidden" id="tr" value="2.4">
+            <div class="hint">The aspect ratio is the chip's own: masking a 16:10 chip to a 16:9 image drops the lumens with the image area, so the hazard does not change. Throw ratio = distance ÷ image width. Tele (the longest throw) concentrates the light most. The peak intensity is the lumens spread over the image, which matches Panasonic's published hazard distances. The source is the lens aperture (focal length ÷ F-number), much smaller than the front glass; presets set it from the lens and the zoom.</div>
+          </div>
           <div class="row" id="photo-lux">
             <div class="field"><label for="lux">Peak illuminance <span class="calc-tag hidden" id="lux-tag">converted</span></label><div class="unit"><input type="number" id="lux" value="60000" min="0"><span>lx</span></div></div>
             <div class="field"><label for="luxd">at a distance of</label><div class="unit"><input type="number" id="luxd" value="20" min="0"><span>m</span></div></div>
@@ -305,7 +328,7 @@ select:disabled, input:disabled { opacity: .5; }
             <div class="field"><label for="lm">Fixture output <span class="calc-tag hidden" id="lm-tag">converted</span></label><div class="unit"><input type="number" id="lm" value="12000" min="0"><span>lm</span></div></div>
             <div class="field"><label for="bang">Beam angle (full)</label><div class="unit"><input type="number" id="bang" value="2.5" step="0.1"><span>°</span></div></div>
           </div>
-          <div class="row">
+          <div class="row" id="zoomrow">
             <div class="field"><label for="zmin">Zoom, narrowest</label><div class="unit"><input type="number" id="zmin" min="0" step="0.1" placeholder="optional"><span>°</span></div></div>
             <div class="field"><label for="zmax">Zoom, widest</label><div class="unit"><input type="number" id="zmax" min="0" step="0.1" placeholder="optional"><span>°</span></div></div>
           </div>
@@ -327,13 +350,13 @@ select:disabled, input:disabled { opacity: .5; }
           <div class="hint" id="photo-hint"></div>
           <h3>Source</h3>
           <div class="row">
-            <div class="field"><label for="dsrc">Front lens diameter</label><div class="unit"><input type="number" id="dsrc" value="170" min="0"><span>mm</span></div></div>
-            <div class="field"><label for="cct">Colour temperature</label><div class="unit"><input type="number" id="cct" value="7500" min="1800" max="20000" step="100"><span>K</span></div></div>
+            <div class="field"><label for="dsrc" id="dsrc-label">Front lens diameter</label><div class="unit"><input type="number" id="dsrc" value="170" min="0"><span>mm</span></div></div>
+            <div class="field"><label for="cct" id="cct-label">Colour temperature</label><div class="unit"><input type="number" id="cct" value="7500" min="1800" max="20000" step="100"><span>K</span></div></div>
           </div>
           <div class="row one">
             <div class="field"><label for="eng">Light engine</label><select id="eng"></select></div>
           </div>
-          <div class="row one">
+          <div class="row one" id="peak-row">
             <div class="field"><label for="peak">Front lens brightness</label>
               <select id="peak">
                 <option value="1.5">Typical (hot spots ×1.5)</option>
@@ -422,6 +445,7 @@ select:disabled, input:disabled { opacity: .5; }
           <li><b>IEC 62471-5:2015 / ICNIRP 2013:</b> retinal thermal radiance (R(λ) weighting 380 to 1400 nm) ≤ 28,000 / α W/m²/sr from 0.25 s, 20,000 / (α·t<sup>0.25</sup>) below; continuous light is averaged over 11 mrad and α is taken at least 11 mrad and at most 100 mrad. Blue light: weighted radiance × time ≤ 10⁶ J/m²/sr, averaged over 11 mrad up to 100 s, then 1.1·√t mrad.</li>
           <li><b>IEC 62471:2006 / EN 62471 / EU 2006/25/EC:</b> the older ICNIRP 1997 weighting (10 × B(λ) in the blue) and 50,000 / (C·t<sup>0.25</sup>) W/m²/sr up to 10 s, C = α between 1.7 and 100 mrad, with a 1.7 mrad field of view at 0.25 s. The Directive itself gives no averaging angle for retinal thermal; this uses the EN 62471 / CIE S009 reading, while the Commission's non-binding guide simplifies to shorter distances. For small, blue-rich beam sources this gives much longer hazard distances than IEC 62471-5; many data sheets and EU workplace assessments use it.</li>
           <li><b>Source model:</b> the front lens is an evenly lit disc of luminance = peak intensity ÷ lens area, raised by the hot-spot factor where the lens is larger than the averaging angle (measured: about 1 for profiles at narrow zoom and even optics, up to about 2 for washes and wide zoom; typical 1.5). Close to the fixture the eye sees only a patch of the lens, limited to 1.2 × the beam angle. A negative beam angle makes the crossover the source. Wider zoom lowers the peak intensity along a typical curve fitted to the published zoom photometry of 36 fixtures (with lux at both ends it follows the data). Lux from a photometric table is converted as lux × distance² from the front lens. Below 4° beam angle, lumens do not give the peak intensity reliably (0.3 to 5 times in published data), so lux or candela is needed.</li>
+          <li><b>Projectors:</b> peak intensity = ANSI lumens ÷ the solid angle of the image (from throw ratio and aspect ratio); the source is the lens aperture (focal length ÷ F-number), evenly lit, and follows the zoom. Checked against Panasonic's published IEC 62471-5 hazard distances (PT-RZ21K, PT-RZ12K, PT-RQ25K, PT-RZ970 with their lenses): within −16 % to +13 %. Hazard distances are measured from the lens.</li>
           <li><b>Spectrum by light engine</b> (lumens per R-weighted watt for ICNIRP 2013 / 1997, blue light per lumen), typical values: white LED 314 (285 at 10,000 K) / 190 to 72 by colour temperature, blue light 0.9 × black body; violet-pumped or unknown LED 245, blue light × 1.45; laser-phosphor 300 (model-based), blue light 0.9 × black body; discharge lamp in a moving head 270 / 78; open-face HMI as a black body including its infrared, at most 200, blue light × 1.4; xenon short arc 130 (an unverified estimate); tungsten as a full black body including its infrared; RGB mixes 140 / 24 with 3.7 mW of blue light per lumen (Claypaky Xtylos measured at full RGB: 140 lm/W, 3.1 mW/lm). Sources: CIE 015:2018 LED spectra, DGUV BoSS spectroradiometer tables of 13 moving heads.</li>
           <li><b>PWM dimming:</b> every pulse runs at full brightness, so with a PWM frequency each pulse is also checked against the ICNIRP 2013 repetitive-pulse rule (pulse limit × n<sup>−0.25</sup>, at least 0.4 or 0.2) for sources larger than 5 mrad. Without a frequency the dimmer is taken as current dimming.</li>
           <li><b>Dazzle distance (NODD):</b> the illuminance at the eye in lux is compared with the same maximum dazzle exposure table as on the laser page as lux ÷ 683, raised by about 5 % because the framework's CIE 2008 eye sensitivity rates white light slightly brighter than lux does. Open white is assumed. Loss in the air is ignored.</li>
@@ -440,13 +464,15 @@ select:disabled, input:disabled { opacity: .5; }
 const C = window.MPE;
 const $ = id => document.getElementById(id);
 const IDS = ['nm1', 'p1', 'nm2', 'p2', 'nm3', 'p3', 'a', 'phi', 'defA', 'defPhi', 'a1', 'phi1', 'a2', 'phi2', 'a3', 'phi3', 'spat', 'spps', 'spts', 'sang',
-  'sanch', 'sdot', 'srep', 'sbeams', 'mtp', 'mrate', 'sfail', 'ed', 'prof', 'lux', 'luxd', 'lm', 'bang', 'zmin', 'zmax', 'luxw', 'wxo', 'dsrc', 'cct', 'eng', 'peak', 'lstd', 'pct', 'lens', 'pwm', 'r', 't'];
+  'sanch', 'sdot', 'srep', 'sbeams', 'mtp', 'mrate', 'sfail', 'ed', 'prof', 'plm', 'asp', 'plens', 'trmin', 'trmax', 'tr', 'lux', 'luxd', 'lm', 'bang', 'zmin', 'zmax', 'luxw', 'wxo', 'dsrc', 'cct', 'eng', 'peak', 'lstd', 'pct', 'lens', 'pwm', 'r', 't'];
 const CHECKS = ['percol'];
 const SEGS = ['mode', 'beam', 'skind', 'photo'];
-const PER_MODE = { pct: { laser: '100', light: '100' }, t: { laser: '0.25', light: '10' } };   // inputs kept per mode
+const PER_MODE = { pct: { laser: '100', light: '100', projector: '100' }, t: { laser: '0.25', light: '10', projector: '10' },
+  eng: { laser: 'led', light: 'led', projector: 'laserph' }, cct: { laser: '7500', light: '7500', projector: '6500' } };   // inputs kept per mode
 const DEFAULTS = {};
-const state = { mode: 'laser', beam: 'static', skind: 'pattern', photo: 'lux', keep: { pct: { laser: '100', light: '100' }, t: { laser: '0.25', light: '10' } } };
-const TPRE = { laser: [['0.25', '0.25 s'], ['4', '4 s'], ['10', '10 s'], ['100', '100 s'], ['900', '15 min']],
+const state = { mode: 'laser', beam: 'static', skind: 'pattern', photo: 'lux', keep: JSON.parse(JSON.stringify(PER_MODE)) };
+const isProj = () => state.mode === 'projector';
+const TPRE = { get projector() { return this.light; }, laser: [['0.25', '0.25 s'], ['4', '4 s'], ['10', '10 s'], ['100', '100 s'], ['900', '15 min']],
   light: [['10', '10 s'], ['100', '100 s'], ['1000', '1000 s']] };
 const ICON = {
   good: '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.3 2.3 4.7-5.3"/></svg>',
@@ -533,6 +559,14 @@ function syncVisibility() {
   $('f-sanch').classList.toggle('hidden', dots || $('spat').value === 'circle');
   $('f-sbeams').classList.toggle('hidden', dots);
   $('cct').disabled = $('eng').value === 'rgb';
+  const proj = isProj();
+  $('in-light-title').textContent = proj ? 'Projector output' : 'Light output';
+  ['photo-row', 'photo-lbl', 'photo-lux', 'photo-lm', 'zoomrow', 'zoomslide', 'zoom-hint', 'photo-hint', 'xorow'].forEach(id => $(id).classList.toggle('hidden', proj));
+  $('photo-proj').classList.toggle('hidden', !proj);
+  $('peak-row').classList.toggle('hidden', proj);
+  $('dsrc-label').textContent = proj ? 'Lens exit pupil diameter' : 'Front lens diameter';
+  $('cct-label').textContent = proj ? 'Colour temperature setting' : 'Colour temperature';
+  syncThrow();
   const known = state.photo === 'lux';           // the other pair's main value is converted, not typed
   $('lux').readOnly = !known; $('lm').readOnly = known;
   $('lux-tag').classList.toggle('hidden', known); $('lm-tag').classList.toggle('hidden', !known);
@@ -541,6 +575,7 @@ function syncVisibility() {
     : 'Enter any distance to see the matching lux. Lumens spread evenly over the beam angle; below 4° that is not reliable and lux is needed.') +
     ' Use the narrowest zoom, open white, no gobo.';
   syncZoom();
+  applyLocks();
   const pre = $('tpre'); const tv = $('t').value;
   pre.innerHTML = TPRE[state.mode].map(([v, l]) => '<button data-v="' + v + '" aria-pressed="' + (+v === +tv) + '">' + l + '</button>').join('');
   $('t-hint').textContent = laser
@@ -556,6 +591,7 @@ function shareHash() {
   IDS.forEach(id => { if ($(id).value !== DEFAULTS[id]) q.set(id, $(id).value); });
   CHECKS.forEach(id => { if ($(id).checked) q.set(id, '1'); });
   if (preset) q.set('preset', preset.mfr + '|' + preset.model);
+  if (preset && unlocked) q.set('unlock', '1');
   return q.toString();
 }
 function readHash() {
@@ -565,7 +601,7 @@ function readHash() {
   IDS.forEach(id => { o[id] = q.has(id) ? q.get(id) : DEFAULTS[id]; });
   CHECKS.forEach(id => { o[id] = q.get(id) === '1'; });
   const pn = q.get('preset'), mode = o.mode || 'laser';
-  if (pn) { const i = PRESETS[mode].findIndex(p => p.mfr + '|' + p.model === pn); if (i >= 0) o.preset = { mode, idx: i }; }
+  if (pn) { const i = PRESETS[mode].findIndex(p => p.mfr + '|' + p.model === pn); if (i >= 0) o.preset = { mode, idx: i, unlock: q.get('unlock') === '1' }; }
   return o;
 }
 function load(o) {
@@ -592,6 +628,53 @@ function syncZoom() {
   $('zoom-hint').textContent = state.photo === 'lux'
     ? 'The lux refers to the narrowest zoom. Wider zoom lowers the peak intensity. Without the lux at widest zoom, a typical fall-off is used (flat to ' + C.ZOOM.c + '× the narrowest angle, then angle^−' + C.ZOOM.n1 + ', fitted to 36 fixtures); with it, the result follows the photometric data.'
     : 'The lumens are spread over the current zoom angle.';
+}
+
+// Hardware values a preset fills in are greyed out while it is selected, until Unlock. Anything the data
+// sheet does not give stays editable, and so do settings (power, zoom, dimming, a projector's colour
+// temperature, lens choice, distance, time, standard) and assumptions such as beam profile or lens hot spots.
+let unlocked = false;
+function presetLocks(p) {
+  if (!p || unlocked) return [];
+  const has = v => v !== null && v !== undefined && v !== '';
+  if (state.mode === 'laser') return ['nm1', 'nm2', 'nm3'].filter((id, i) => has((p.nm || [])[i]))
+    .concat(has(p.a) ? ['a', 'defA'] : [], has(p.phi) ? ['phi', 'defPhi'] : []);
+  const ids = ['dsrc', 'eng'].filter(id => has(p[id]));
+  if (p.proj) return ids.concat(['plm', 'asp'], $('plens').value ? ['trmin', 'trmax'] : []);   // a custom throw ratio is typed
+  return ids.concat(['lux', 'luxd', 'bang', 'zmin', 'zmax', 'luxw', 'cct'].filter(id => has(p[id])), has(p.lux) || has(p.lm) ? ['lm'] : []);
+}
+let lockedIds = [];
+function applyLocks() {
+  lockedIds.forEach(id => { const el = $(id); el.classList.remove('locked'); if (el.tagName === 'SELECT') el.disabled = false; else el.readOnly = false; });
+  lockedIds = presetLocks(preset);
+  const ub = $('unlock');
+  ub.classList.toggle('hidden', !preset);
+  ub.textContent = unlocked ? 'Lock' : 'Unlock';
+  ub.title = unlocked ? 'Restore the data sheet values of the preset and grey them out again' : 'Edit the greyed values, for example with measured values of your unit';
+  // inputs that are calculated rather than typed keep their own state
+  if (state.mode === 'light') { $('lux').readOnly = state.photo !== 'lux'; $('lm').readOnly = state.photo === 'lux'; }
+  $('cct').disabled = $('eng').value === 'rgb';
+  lockedIds.forEach(id => { const el = $(id); el.classList.add('locked'); if (el.tagName === 'SELECT') el.disabled = true; else el.readOnly = true; });
+}
+
+// Projector zoom: the slider runs on a log scale over the lens's throw-ratio range and drives #tr.
+function throwRange() {
+  const lo = val('trmin'), hi = val('trmax');
+  return isFinite(lo) && lo > 0 ? [lo, isFinite(hi) && hi >= lo ? hi : lo] : null;
+}
+function syncThrow() {
+  const z = throwRange(); if (!z) return;
+  let tr = val('tr');
+  if (!(tr >= z[0] && tr <= z[1])) { tr = z[1]; $('tr').value = tr; }
+  $('trzoom').disabled = z[1] === z[0];
+  $('trzoom').value = z[1] > z[0] ? Math.round(1000 * Math.log(tr / z[0]) / Math.log(z[1] / z[0])) : 1000;
+  $('trval').textContent = fmt(tr) + ':1';
+  const l = preset && preset.lenses && preset.lenses.find(x => x.name === $('plens').value);
+  if (l && l.pw) {                          // lens aperture follows the zoom (log interpolation over the throw ratio)
+    const f = z[1] > z[0] ? Math.log(tr / z[0]) / Math.log(z[1] / z[0]) : 1;
+    $('dsrc').value = (l.pw * Math.pow(l.pt / l.pw, f)).toFixed(1);
+  }
+  $('trlo').textContent = fmt(z[0]) + ':1 wide'; $('trhi').textContent = fmt(z[1]) + ':1 tele';
 }
 
 // Reads the form. Returns { error } or the model for the active mode.
@@ -648,6 +731,17 @@ function read() {
     return { r, t, L };
   }
   const eng = $('eng').value;
+  if (isProj()) {
+    const ok = need([['dsrc', 1], ['plm', 1], ['trmin', 0.1, 50], ['trmax', 0.1, 50], ['pwm', 0, 1e7, true]].concat(eng === 'rgb' ? [] : [['cct', 1800, 20000]]).concat(common));
+    if (!ok) return { error: 'Some inputs are missing or out of range (marked red).' };
+    const tr = val('tr'), asp = +$('asp').value, I = C.projectorIntensity(val('plm'), tr, asp);
+    const vHalf = Math.atan(1 / (2 * tr * asp)), dl = val('dsrc') / 1000, pwm = blank('pwm') ? 0 : val('pwm');
+    // the lens aperture of a projector is evenly lit (an image of the light integrator), so no hot-spot factor
+    const M = Object.assign({ I: I * dim, Ifull: I, peak: 1, std: $('lstd').value, pwm, duty: dim, zoom: null, proj: { tr, asp } },
+      C.engine(eng, val('cct')), { dsrc: dl, xo: 0, dlens: dl, cap: Math.tan(vHalf) * 1.2 });
+    $('red-hint').textContent = dim < 1 ? 'Calculated with ' + fmt(M.I / 1e6) + ' Mcd peak intensity' + (pwm ? ', PWM pulses at full brightness.' : '.') : 'Leave at 100 % to calculate the projector at full output.';
+    return { r, t, M };
+  }
   const req = [['dsrc', 1]].concat(eng === 'rgb' ? [] : [['cct', 1800, 20000]])
     .concat(state.photo === 'lux' ? [['lux', 1e-3], ['luxd', 0.1]] : [['lm', 1e-3]]).concat([['pwm', 0, 1e7, true], ['zmin', 0.1, 180, true], ['zmax', 0.1, 180, true], ['luxw', 0, 1e9, true]]);
   // Beam angle: needed for lumens, optional for lux unless it is negative (a beam that crosses over).
@@ -706,7 +800,7 @@ function convert(I, rad) {
 }
 
 // ---------- presets ----------
-const PRESETS = window.MPE_PRESETS || { laser: [], light: [] };
+const PRESETS = window.MPE_PRESETS || { laser: [], light: [], projector: [] };
 let preset = null;
 function option(sel, value, text) { const o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o); }
 function fillManufacturers() {
@@ -721,13 +815,13 @@ function fillModels() {
   option(sel, '', mfr ? 'Choose a model' : '');
   PRESETS[state.mode].forEach((p, i) => { if (p.mfr === mfr) option(sel, i, p.model); });
   sel.disabled = !mfr;
-  preset = null;
+  preset = null; unlocked = false;
   $('pnote').textContent = mfr ? '' : 'Pick a manufacturer and model to fill in data sheet values, then adjust them to your unit.';
 }
 function applyPreset() {
   const p = PRESETS[state.mode][$('pmodel').value];
-  if (!p) { preset = null; return; }
-  preset = p;
+  if (!p) { preset = null; render(); return; }
+  preset = p; unlocked = false;
   // a value the data sheet does not give is blanked, so nothing is left over from the previous fixture
   const set = (id, v) => { const ok = v !== null && v !== undefined; $(id).value = ok ? v : ''; return ok; };
   const missing = [];
@@ -739,22 +833,29 @@ function applyPreset() {
     if (!set('phi', p.phi)) missing.push('divergence');
     $('defA').value = p.defA || 'e2'; $('defPhi').value = p.defPhi || 'e2';
   } else {
-    if (p.lux && p.luxd) { setSeg('photo', 'lux'); set('lux', p.lux); set('luxd', p.luxd); }
+    const pl = $('plens'); pl.textContent = ''; option(pl, '', 'Custom throw ratio');
+    if (p.proj) {
+      set('plm', p.proj.lm); $('asp').value = p.proj.asp || '1.6';
+      (p.lenses || []).forEach(l => option(pl, l.name, l.name + ' (' + l.trmin + (l.trmax > l.trmin ? '–' + l.trmax : '') + ':1)'));
+      const l = (p.lenses || []).find(x => x.name === p.proj.lens) || (p.lenses || [])[0];
+      if (l) { pl.value = l.name; set('trmin', l.trmin); set('trmax', l.trmax); set('tr', l.trmax); }
+    } else if (p.lux && p.luxd) { setSeg('photo', 'lux'); set('lux', p.lux); set('luxd', p.luxd); }
     else if (p.lm && p.bang) { setSeg('photo', 'lm'); set('lm', p.lm); }
     else missing.push('light output');
-    if (!set('bang', p.bang)) missing.push('beam angle');
+    if (!p.proj && !set('bang', p.bang)) missing.push('beam angle');
     set('zmin', p.zmin); set('zmax', p.zmax); set('luxw', p.luxw);
-    if (!set('dsrc', p.dsrc)) missing.push('front lens diameter');
+    if (!set('dsrc', p.dsrc)) missing.push(p.proj ? 'lens exit pupil' : 'front lens diameter');
     $('eng').value = p.eng || 'led';
     if (!set('cct', p.cct) && p.eng !== 'rgb') missing.push('colour temperature');
     if (p.wxo) set('wxo', p.wxo);
     $('pwm').value = p.pwm || '';
-    $('peak').value = '1.5';
+    if (!p.proj) $('peak').value = '1.5';
   }
   const note = $('pnote'); note.textContent = '';
   note.append('Data sheet values for the ' + p.mfr + ' ' + p.model + '. ' + (p.note ? p.note + ' ' : '') +
     (p.lux && p.lm ? 'Data sheet output: ' + fmt(p.lm) + ' lm. ' : '') +
-    (missing.length ? 'Not in the data sheet, enter it yourself: ' + missing.join(', ') + '. ' : ''));
+    (missing.length ? 'Not in the data sheet, enter it yourself: ' + missing.join(', ') + '. ' : '') +
+    'Greyed values come from the data sheet; Unlock lets you change them. ');
   if (/^https:\/\//.test(p.src || '')) {
     const a = document.createElement('a'); a.href = p.src; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Source';
     note.append(a);
@@ -1016,14 +1117,15 @@ function reportLight(r, t, M, res, hd) {
   const stdName = M.std === '2006' ? 'IEC 62471:2006 / EN 62471' : 'IEC 62471-5';
   const duty = C.lightMaxDuty(r, 0.25, M);
   const ok = res.hr <= 1;
-  const photo = state.photo === 'lux' ? val('lux').toLocaleString('en-US') + ' lx at ' + fmt(val('luxd')) + ' m' : fmt(val('lm')) + ' lm';
+  const photo = isProj() ? fmt(val('plm')) + ' ANSI lm, ' + ($('plens').value ? $('plens').value + ' lens, ' : '') + 'throw ratio ' + fmt(val('tr')) + ':1'
+    : state.photo === 'lux' ? val('lux').toLocaleString('en-US') + ' lx at ' + fmt(val('luxd')) + ' m' : fmt(val('lm')) + ' lm';
   const lines = [
-    'Moving light: ' + device() + ', ' + photo + (zoomRange() ? ', zoom ' + fmt(val('bang')) + '°' : '') +
+    (isProj() ? 'Projector: ' : 'Moving light: ') + device() + ', ' + photo + (!isProj() && zoomRange() ? ', zoom ' + fmt(val('bang')) + '°' : '') +
       (M.duty < 1 ? ', dimmed to ' + fmt(M.duty * 100) + ' %' + (M.pwm ? ' (PWM ' + fmt(M.pwm) + ' Hz)' : '') : '') + '. ' + stdName + '.',
     'At ' + fmt(r) + ' m: ' + (ok ? 'risk group 2 or lower, acceptable' : 'risk group 3, NOT acceptable') + ' (' + fmtRatio(res.hr) + '× the RG2 limit).' +
       ' Hazard distance ' + (hd === 0 ? 'none' : fmtDist(hd, 1).join(' ')) + '.',
   ];
-  if (!ok) lines.push('Needed: dim to max ' + down(duty * 100, duty < 0.01 ? 2 : 3) + ' %' + (zoomRange() ? ', zoom wider' : '') + ' or keep ' + fmtDist(hd, 1).join(' ') + ' from the audience.');
+  if (!ok) lines.push('Needed: dim to max ' + down(duty * 100, duty < 0.01 ? 2 : 3) + ' %' + (isProj() ? ', use a shorter throw' : zoomRange() ? ', zoom wider' : '') + ' or keep ' + fmtDist(hd, 1).join(' ') + ' from the audience.');
   return lines.join('\n');
 }
 
@@ -1118,6 +1220,17 @@ SEGS.forEach(id => $(id).addEventListener('click', ev => {
   if (id === 'mode') fillManufacturers();
   render();
 }));
+$('trzoom').addEventListener('input', () => {
+  const z = throwRange(); if (!z) return;
+  const tr = z[0] * Math.pow(z[1] / z[0], val('trzoom') / 1000);
+  $('tr').value = tr.toFixed(tr < 1 ? 3 : 2);
+  render();
+});
+$('plens').addEventListener('change', () => {
+  const l = preset && preset.lenses && preset.lenses.find(x => x.name === $('plens').value);
+  if (l) { $('trmin').value = l.trmin; $('trmax').value = l.trmax; $('tr').value = l.trmax; if (l.pupil) $('dsrc').value = l.pupil; }
+  render();
+});
 $('zoom').addEventListener('input', () => {
   const z = zoomRange(); if (!z) return;
   const a = z[0] * Math.pow(z[1] / z[0], val('zoom') / 1000);
@@ -1134,29 +1247,35 @@ $('share').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(url); b.textContent = 'Link copied'; } catch (e) { prompt('Copy this link:', url); }
   setTimeout(() => { b.textContent = 'Share link'; }, 1500);
 });
-$('pmfr').addEventListener('change', fillModels);
+$('pmfr').addEventListener('change', () => { fillModels(); render(); });
 $('pmodel').addEventListener('change', applyPreset);
+$('unlock').addEventListener('click', () => { if (unlocked) applyPreset(); else { unlocked = true; render(); } });
 $('tpre').addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
   $('t').value = b.dataset.v; render();
 });
 function resetForm() {
-  state.keep = { pct: { laser: '100', light: '100' }, t: { laser: '0.25', light: '10' } };
-  load(Object.assign({ beam: 'static', skind: 'pattern', photo: 'lux' }, DEFAULTS, { t: state.keep.t[state.mode] }));
+  state.keep = JSON.parse(JSON.stringify(PER_MODE));
+  load(Object.assign({ beam: 'static', skind: 'pattern', photo: 'lux' }, DEFAULTS, ...Object.keys(PER_MODE).map(f => ({ [f]: state.keep[f][state.mode] }))));
   $('pmfr').value = ''; fillModels();
   render();
 }
 $('clear').addEventListener('click', resetForm);
 window.addEventListener('resize', () => { if (chartState && !$('out').classList.contains('hidden')) drawChart(chartState.series, chartState.r, chartState.hd, chartState.limitName); });
-let saved = null;
-try { saved = readHash(); if (saved) load(saved); } catch (e) { /* ignore */ }
-fillManufacturers();
-if (saved && saved.preset && saved.preset.mode === state.mode && PRESETS[state.mode][saved.preset.idx]) {   // restore the preset link, not its values
-  const p = PRESETS[state.mode][saved.preset.idx];
-  $('pmfr').value = p.mfr; fillModels(); $('pmodel').value = saved.preset.idx; preset = p;
-  $('pnote').textContent = 'Preset: ' + p.mfr + ' ' + p.model + (p.note ? '. ' + p.note : '');
+function loadFromHash() {
+  let saved = null;
+  try { saved = readHash(); if (saved) load(saved); } catch (e) { /* ignore */ }
+  fillManufacturers();
+  if (saved && saved.preset && saved.preset.mode === state.mode && PRESETS[state.mode][saved.preset.idx]) {   // restore the preset link, not its values
+    const p = PRESETS[state.mode][saved.preset.idx];
+    $('pmfr').value = p.mfr; fillModels(); $('pmodel').value = saved.preset.idx; preset = p; unlocked = saved.preset.unlock;
+    $('pnote').textContent = 'Preset: ' + p.mfr + ' ' + p.model + (p.note ? '. ' + p.note : '');
+    if (p.lenses) { const pl = $('plens'); pl.textContent = ''; option(pl, '', 'Custom throw ratio'); p.lenses.forEach(l => option(pl, l.name, l.name + ' (' + l.trmin + (l.trmax > l.trmin ? '–' + l.trmax : '') + ':1)')); pl.value = saved.plens || ''; }
+  }
+  render();
 }
-render();
+window.addEventListener('hashchange', loadFromHash);   // a share link pasted into an open page
+loadFromHash();
 })();
 </script>
 </body>

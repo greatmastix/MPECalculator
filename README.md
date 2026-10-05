@@ -2,7 +2,7 @@
 
 **▶ Open the calculator: [greatmastix.github.io/MPECalculator](https://greatmastix.github.io/MPECalculator/)**
 
-Eye-safety calculator for **show lasers** and **high-power moving lights**. It works out the maximum permissible exposure, hazard distances and the reduction needed at the audience, from data-sheet or measured values. It runs entirely in the browser: no server, no cookies, no tracking. The whole calculation lives in the page address, so a link reproduces it exactly.
+Eye-safety calculator for **show lasers**, **high-power moving lights** and **projectors**. It works out the maximum permissible exposure, hazard distances and the reduction needed at the audience, from data-sheet or measured values. It runs entirely in the browser: no server, no cookies, no tracking. The whole calculation lives in the page address, so a link reproduces it exactly.
 
 ## What it calculates
 
@@ -20,9 +20,13 @@ Eye-safety calculator for **show lasers** and **high-power moving lights**. It w
 - Zoom slider: peak intensity across the zoom from the photometric data
 - Retinal thermal and blue-light hazard with spectral constants per light engine (white LED, laser-phosphor, discharge, HMI, tungsten, xenon, RGB mixes), negative beam angles (crossover beams), and how long someone can stare into the fixture
 
-**Both**
+**Projectors** (same standards as moving lights)
+- Hazard distance and risk group from ANSI lumens, throw ratio (zoom slider over the lens range) and native chip aspect ratio
+- Panasonic PT-RQ / PT-RZ presets with their lens lists; the colour temperature setting is taken into account
+
+**All**
 - Dazzle distances (NODD) after Williamson & McLin (2018)
-- Presets with data-sheet values for common projectors and fixtures
+- Presets with data-sheet values for common lasers, fixtures and projectors. Values a preset provides are greyed out; **Unlock** lets you replace them with measured values
 - A compact text of the results for a risk assessment
 
 ## Using it

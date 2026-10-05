@@ -441,6 +441,15 @@
     const bound = Math.min(lo[1] * Math.min(1, Math.pow(ZOOM.c * lo[0] / z, ZOOM.n)), hi[1] * Math.pow(hi[0] / z, ZOOM.m));
     return Math.sqrt(line * Math.max(line, bound));
   }
+  // Image projector: ANSI lumens spread over the image (throw ratio = distance / image width, aspect = width /
+  // height), times the centre-to-average ratio of the image (PROJ.peak). With the lens aperture (focal length ÷
+  // F-number) as the source, this reproduces Panasonic's published IEC 62471-5 hazard distances (11 lens and
+  // projector combinations) within -21 % to +30 %, median about 1.0, with the centre equal to the average.
+  const PROJ = { peak: 1.0 };
+  function projectorIntensity(lm, tr, aspect) {
+    const h = Math.atan(1 / (2 * tr)), v = Math.atan(1 / (2 * tr * aspect));
+    return PROJ.peak * lm / (4 * Math.asin(Math.sin(h) * Math.sin(v)));
+  }
   // Luminous flux spread evenly over a cone with the given full angle (rad).
   function intensityFromLumens(lm, angle) { return lm / (2 * Math.PI * (1 - Math.cos(angle / 2))); }
   // Distance from the lens at which a converging beam (negative beam angle) is narrowest.
@@ -551,7 +560,7 @@
   }
 
   const api = {
-    ZOOM, zoomIntensity, AP, A_AP, EDITIONS, DEF_GAUSS, DEF_FLAT, hThermal, hPhoto, c3, c5, d63, flatFrac, apertureFraction, lineData,
+    ZOOM, zoomIntensity, PROJ, projectorIntensity, AP, A_AP, EDITIONS, DEF_GAUSS, DEF_FLAT, hThermal, hPhoto, c3, c5, d63, flatFrac, apertureFraction, lineData,
     staticRatio, passLengths, scanSpots, laserRatio, laserNOHD, laserMaxTime, laserNeededLens, MDE, vLambda2008,
     visualIrradiance, laserNODD, vLambda, bLambda, r13, r97, blackBody, ENGINES, engine, intensityFromLux,
     intensityFromLumens, crossover, lightRatio, peakRange, lightHazardDistance, lightNODD, lightMaxTime, lightMaxDuty,
