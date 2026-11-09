@@ -140,6 +140,9 @@ select:disabled { opacity: .5; }
 .tip .r span { color: var(--text-secondary); }
 
 .tbl-wrap { overflow-x: auto; }
+.cambar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; font-size: 12px; color: var(--text-muted); }
+.cambar label { color: var(--text-secondary); }
+.cambar select { width: auto; padding: 5px 8px; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: right; padding: 9px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; font-variant-numeric: tabular-nums; }
 th { font-size: 11.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
@@ -158,6 +161,8 @@ tr.here td { background: var(--surface-2); }
 #preset h3 { display: flex; align-items: center; }
 .unlock { margin: -4px 0 -4px auto; padding: 3px 10px; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
 .foot { margin: 32px 0 8px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); text-align: center; }
+.foot p { margin: 0 auto 6px; max-width: 760px; line-height: 1.5; }
+.foot b { color: var(--text-secondary); font-weight: 600; }
 h2 .clear { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 500; padding: 4px 12px; font-size: 12.5px; color: var(--text-secondary); }
 .chk { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); margin: 2px 0 10px; cursor: pointer; }
 .chk input { width: 15px; height: 15px; accent-color: var(--accent); margin: 0; }
@@ -415,6 +420,14 @@ select:disabled, input:disabled { opacity: .5; }
           <div class="card tbl-wrap"><table id="dtbl"></table></div>
         </div>
 
+        <div id="camera">
+          <h2>Camera damage <span class="count">a camera pointed straight at the laser, typical and worst case</span></h2>
+          <div class="card tbl-wrap">
+            <div class="cambar"><label for="csens">Sensor</label><select id="csens"></select><span id="cnote"></span></div>
+            <table id="ctbl"></table>
+          </div>
+        </div>
+
         <h2>Text for a risk assessment</h2>
         <div class="card report">
           <div class="bar"><span>The calculated results, ready to paste.</span><button class="btn" id="copyrep" type="button">Copy text</button></div>
@@ -437,7 +450,9 @@ select:disabled, input:disabled { opacity: .5; }
           <li><b>Lens and reduction:</b> a diverging lens of power D adds a divergence of a·D. The lens shown is the total lens on the laser's own beam; lenses in contact add. Percentages are of full power.</li>
           <li><b>Dazzle distance (NODD):</b> the distance out to which the beam, resting on the eye, hides a patch of the view of the given width. Simplified maximum dazzle exposure table of Williamson and McLin (2018) at 555 nm, in µW/cm²: 2° 0.001 / 0.6 / 40, 10° 0.04 / 30 / 2,000, 20° 0.16 / 120 / 8,000, 40° 0.6 / 450 / 30,000 for night / dusk / day, each colour weighted by the CIE 2008 eye sensitivity the framework specifies. The table is for a 40-year-old with dark eyes looking for a small, faint object (0.08° at 60 % contrast); older or light-eyed viewers are dazzled further out, roughly 1.2 to 1.5 times the distance at 65. Loss in the air is ignored.</li>
           <li><b>Skin:</b> the skin limit is at least 50 times higher than the eye MPE, so it is met wherever the eye MPE is met. It only matters for people whose eyes are protected.</li>
-          <li><b>Not covered:</b> wavelengths outside 400 to 700 nm, pulsed (Q-switched) lasers, viewing through binoculars or camera lenses, reflections, atmospheric scintillation on long outdoor paths.</li>
+          <li><b>Camera damage:</b> a camera lens focuses the beam to a spot of a few micrometres, so a camera can be damaged far beyond the NOHD, and scanning barely helps: the laser stays at the same place in the picture, every pass reaches the full peak, and the sensor heats up within microseconds. The sensor irradiance follows Ritt (Sensors 2019 and 2023): the power through the entrance pupil (focal length ÷ F-number), focused to the diffraction spot of a truncated Gaussian beam with aberrations neglected, widened by the image of a multimode laser's own source; lens transmittance 0.9. It is compared with damage thresholds measured on sensors at 532 nm (Schwarz et al. 2017; ILDA quotes the same data): 57 kW/cm² for a colour CMOS, 73 for a monochrome CMOS and 13 for a colour CCD at 1 s, slightly higher at 0.25 s and about two thirds at 10 s. A scanned beam counts with its total time on the lens within the exposure time, at least 0.25 s. A beam narrower than the lens can be harmless again up close, because it focuses to a larger spot. Stopping the lens down helps a lot: the irradiance falls with about F⁴.</li>
+          <li><b>Camera damage, typical and worst case:</b> the worst case is Ritt's: a perfect lens wide open, focused on the laser and pointed straight at it. It focuses a distant beam to 1 to 2 µm, far smaller than the 12 to 26 µm spots the thresholds were measured with, and it disagrees with field reports: IPVM saw no permanent damage to security cameras from about 15 m with handheld lasers of a few watts, and ILDA finds a 5 mW pointer harmless to cameras. The typical estimate takes a spot twice the diffraction limit (lenses wide open, focus errors, turbulence; an assumption) and lets spots smaller than the 3 µm filter and oxide stack lose heat sideways: threshold × (1 + 3 µm / d) / (1 + 3 µm / 18 µm), from heat flow, not measured. It shortens the far distances about 2.5 to 3.5 times, and still predicts damage beyond IPVM's 15 m, so real cameras may hold up better still. Unknowns either way: no damage data exist between 10 ns and 0.25 s, the range of scan passes (one study found CCD damage hard to produce below 0.25 s); repeated hits lower thresholds; modern phone sensors (back-side illuminated, 1 µm pixels) have not been tested with continuous beams.</li>
+          <li><b>Not covered:</b> wavelengths outside 400 to 700 nm, pulsed (Q-switched) lasers, viewing through binoculars or a camera's optical viewfinder, reflections, atmospheric scintillation on long outdoor paths.</li>
         </ul>
       </div>
       <div class="card notes hidden" id="notes-light">
@@ -446,7 +461,7 @@ select:disabled, input:disabled { opacity: .5; }
           <li><b>IEC 62471-5:2015 / ICNIRP 2013:</b> retinal thermal radiance (R(λ) weighting 380 to 1400 nm) ≤ 28,000 / α W/m²/sr from 0.25 s, 20,000 / (α·t<sup>0.25</sup>) below; continuous light is averaged over 11 mrad and α is taken at least 11 mrad and at most 100 mrad. Blue light: weighted radiance × time ≤ 10⁶ J/m²/sr, averaged over 11 mrad up to 100 s, then 1.1·√t mrad.</li>
           <li><b>IEC 62471:2006 / EN 62471 / EU 2006/25/EC:</b> the older ICNIRP 1997 weighting (10 × B(λ) in the blue) and 50,000 / (C·t<sup>0.25</sup>) W/m²/sr up to 10 s, C = α between 1.7 and 100 mrad, with a 1.7 mrad field of view at 0.25 s. The Directive itself gives no averaging angle for retinal thermal; this uses the EN 62471 / CIE S009 reading, while the Commission's non-binding guide simplifies to shorter distances. For small, blue-rich beam sources this gives much longer hazard distances than IEC 62471-5; many data sheets and EU workplace assessments use it.</li>
           <li><b>Source model:</b> the front lens is an evenly lit disc of luminance = peak intensity ÷ lens area, raised by the hot-spot factor where the lens is larger than the averaging angle (measured: about 1 for profiles at narrow zoom and even optics, up to about 2 for washes and wide zoom; typical 1.5). Close to the fixture the eye sees only a patch of the lens, limited to 1.2 × the beam angle. A negative beam angle makes the crossover the source. Wider zoom lowers the peak intensity along a typical curve fitted to the published zoom photometry of 36 fixtures (with lux at both ends it follows the data). Lux from a photometric table is converted as lux × distance² from the front lens. Below 4° beam angle, lumens do not give the peak intensity reliably (0.3 to 5 times in published data), so lux or candela is needed.</li>
-          <li><b>Projectors:</b> peak intensity = ANSI lumens ÷ the solid angle of the image (from throw ratio and aspect ratio); the source is the lens aperture (focal length ÷ F-number), evenly lit, and follows the zoom. Checked against Panasonic's published IEC 62471-5 hazard distances (PT-RZ21K, PT-RZ12K, PT-RQ25K, PT-RZ970 with their lenses): within −16 % to +13 %. Hazard distances are measured from the lens.</li>
+          <li><b>Projectors:</b> peak intensity = ANSI lumens ÷ the solid angle of the image (from throw ratio and aspect ratio); the source is the lens aperture (focal length ÷ F-number), evenly lit, and follows the zoom. A lens that closes down towards tele (ET-D3LET80 and ET-D75LE8, F2.5 to F2.7) passes (2.5 ÷ F)² of the light. Checked against Panasonic's published IEC 62471-5 hazard distances (PT-RZ21K, PT-RZ12K, PT-RQ25K, PT-RQ45K, PT-RZ970 with their lenses, 20 in all): within −23 % to +30 %, median +5 %, except the PT-RQ25K with the ET-D3LET80 / ET-D75LE8, where Panasonic gives 4.5 m and this gives about 10 m. Hazard distances are measured from the lens.</li>
           <li><b>Spectrum by light engine</b> (lumens per R-weighted watt for ICNIRP 2013 / 1997, blue light per lumen), typical values: white LED 314 (285 at 10,000 K) / 190 to 72 by colour temperature, blue light 0.9 × black body; violet-pumped or unknown LED 245, blue light × 1.45; laser-phosphor 300 (model-based), blue light 0.9 × black body; discharge lamp in a moving head 270 / 78; open-face HMI as a black body including its infrared, at most 200, blue light × 1.4; xenon short arc 130 (an unverified estimate); tungsten as a full black body including its infrared; RGB mixes 140 / 24 with 3.7 mW of blue light per lumen (Claypaky Xtylos measured at full RGB: 140 lm/W, 3.1 mW/lm). Sources: CIE 015:2018 LED spectra, DGUV BoSS spectroradiometer tables of 13 moving heads.</li>
           <li><b>PWM dimming:</b> every pulse runs at full brightness, so with a PWM frequency each pulse is also checked against the ICNIRP 2013 repetitive-pulse rule (pulse limit × n<sup>−0.25</sup>, at least 0.4 or 0.2) for sources larger than 5 mrad. Without a frequency the dimmer is taken as current dimming.</li>
           <li><b>Dazzle distance (NODD):</b> the illuminance at the eye in lux is compared with the same maximum dazzle exposure table as on the laser page as lux ÷ 683, raised by about 5 % because the framework's CIE 2008 eye sensitivity rates white light slightly brighter than lux does. Open white is assumed. Loss in the air is ignored.</li>
@@ -455,7 +470,10 @@ select:disabled, input:disabled { opacity: .5; }
       </div>
     </section>
   </div>
-  <footer class="foot">MPE Calculator · <a href="https://github.com/greatmastix/MPECalculator/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>, no warranty: the safety assessment remains your responsibility · <a href="https://github.com/greatmastix/MPECalculator" target="_blank" rel="noopener">Source on GitHub</a></footer>
+  <footer class="foot">
+    <p><b>Privacy:</b> no cookies, no tracking, nothing loaded from other servers, nothing stored. Your settings live only in the page address after the #, which browsers never send to a server; copying the address shares them. The host sees your IP address only to deliver the page: <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub Pages</a>, or the mastix.dog copy, which logs no IP addresses.</p>
+    <p>MPE Calculator · <a href="https://github.com/greatmastix/MPECalculator/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>, no warranty: the safety assessment remains your responsibility · <a href="https://github.com/greatmastix/MPECalculator" target="_blank" rel="noopener">Source on GitHub</a> · <a href="https://github.com/greatmastix/MPECalculator/issues" target="_blank" rel="noopener">Questions</a></p>
+  </footer>
 </div>
 
 <script src="presets.js"></script>
@@ -466,7 +484,7 @@ select:disabled, input:disabled { opacity: .5; }
 const C = window.MPE;
 const $ = id => document.getElementById(id);
 const IDS = ['nm1', 'p1', 'nm2', 'p2', 'nm3', 'p3', 'a', 'phi', 'defA', 'defPhi', 'a1', 'phi1', 'a2', 'phi2', 'a3', 'phi3', 'spat', 'spps', 'spts', 'sang',
-  'sanch', 'sdot', 'srep', 'sbeams', 'mtp', 'mrate', 'sfail', 'ed', 'prof', 'plm', 'asp', 'plens', 'trmin', 'trmax', 'tr', 'lux', 'luxd', 'lm', 'bang', 'zmin', 'zmax', 'luxw', 'wxo', 'dsrc', 'cct', 'eng', 'peak', 'lstd', 'pct', 'lens', 'pwm', 'r', 't'];
+  'sanch', 'sdot', 'srep', 'sbeams', 'mtp', 'mrate', 'sfail', 'ed', 'prof', 'csens', 'plm', 'asp', 'plens', 'trmin', 'trmax', 'tr', 'lux', 'luxd', 'lm', 'bang', 'zmin', 'zmax', 'luxw', 'wxo', 'dsrc', 'cct', 'eng', 'peak', 'lstd', 'pct', 'lens', 'pwm', 'r', 't'];
 const CHECKS = ['percol'];
 const SEGS = ['mode', 'beam', 'skind', 'photo'];
 const PER_MODE = { pct: { laser: '100', light: '100', projector: '100' }, t: { laser: '0.25', light: '10', projector: '10' },
@@ -483,6 +501,7 @@ const ICON = {
 };
 Object.keys(C.ENGINES).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = C.ENGINES[k].name; $('eng').appendChild(o); });
 $('eng').value = 'led';
+Object.keys(C.SENSORS).forEach(k => option($('csens'), k, C.SENSORS[k].name + ' (' + fmt(C.SENSORS[k].e1 / 1e7, 2) + ' kW/cm² at 1 s)'));
 
 // ---------- formatting ----------
 function fmt(x, sig) {
@@ -547,6 +566,7 @@ function syncVisibility() {
   $('in-light').classList.toggle('hidden', laser);
   $('notes-laser').classList.toggle('hidden', !laser);
   $('notes-light').classList.toggle('hidden', laser);
+  $('camera').classList.toggle('hidden', !laser);
   $('lens-field').classList.toggle('hidden', !laser);
   $('pwm-field').classList.toggle('hidden', laser);
   $('pct-label').textContent = laser ? 'Power reduced to' : 'Dimmed to';
@@ -664,18 +684,23 @@ function throwRange() {
   const lo = val('trmin'), hi = val('trmax');
   return isFinite(lo) && lo > 0 ? [lo, isFinite(hi) && hi >= lo ? hi : lo] : null;
 }
+let lensLight = 1;   // share of the rated lumens the preset lens passes at the current zoom
 function syncThrow() {
+  lensLight = 1;
   const z = throwRange(); if (!z) return;
   let tr = val('tr');
   if (!(tr >= z[0] && tr <= z[1])) { tr = z[1]; $('tr').value = tr; }
   $('trzoom').disabled = z[1] === z[0];
   $('trzoom').value = z[1] > z[0] ? Math.round(1000 * Math.log(tr / z[0]) / Math.log(z[1] / z[0])) : 1000;
-  $('trval').textContent = fmt(tr) + ':1';
   const l = preset && preset.lenses && preset.lenses.find(x => x.name === $('plens').value);
+  const f = z[1] > z[0] ? Math.log(tr / z[0]) / Math.log(z[1] / z[0]) : 1;
   if (l && l.pw) {                          // lens aperture follows the zoom (log interpolation over the throw ratio)
-    const f = z[1] > z[0] ? Math.log(tr / z[0]) / Math.log(z[1] / z[0]) : 1;
     $('dsrc').value = (l.pw * Math.pow(l.pt / l.pw, f)).toFixed(1);
   }
+  // a lens that closes down towards tele (e.g. F2.5 to F2.7) clips the light cone: lt = (2.5 / F)² at tele,
+  // interpolated like the aperture (which then gives exactly that F-number along the zoom)
+  if (l && l.lt) lensLight = Math.pow(l.lt, f);
+  $('trval').textContent = fmt(tr) + ':1' + (lensLight < 1 ? ' · ' + Math.round(lensLight * 100) + ' % light' : '');
   $('trlo').textContent = fmt(z[0]) + ':1 wide'; $('trhi').textContent = fmt(z[1]) + ':1 tele';
 }
 
@@ -736,7 +761,7 @@ function read() {
   if (isProj()) {
     const ok = need([['dsrc', 1], ['plm', 1], ['trmin', 0.1, 50], ['trmax', 0.1, 50], ['pwm', 0, 1e7, true]].concat(eng === 'rgb' ? [] : [['cct', 1800, 20000]]).concat(common));
     if (!ok) return { error: 'Some inputs are missing or out of range (marked red).' };
-    const tr = val('tr'), asp = +$('asp').value, I = C.projectorIntensity(val('plm'), tr, asp);
+    const tr = val('tr'), asp = +$('asp').value, I = C.projectorIntensity(val('plm') * lensLight, tr, asp);
     const vHalf = Math.atan(1 / (2 * tr * asp)), dl = val('dsrc') / 1000, pwm = blank('pwm') ? 0 : val('pwm');
     // the lens aperture of a projector is evenly lit (an image of the light integrator), so no hot-spot factor
     const M = Object.assign({ I: I * dim, Ifull: I, peak: 1, std: $('lstd').value, pwm, duty: dim, zoom: null, proj: { tr, asp } },
@@ -1002,6 +1027,19 @@ function renderLaser(m) {
   // dazzle: a resting beam, each colour weighted by how bright it looks; no loss in the air
   dazzleTable(mde => C.laserNODD(L, mde), nohdStatic, 'NOHD');
 
+  // camera sensors: a lens pointed at the laser, the beam resting on it or scanned across it
+  const sens = $('csens').value;
+  const cams = C.CAMERAS.map(c => ({ c, typ: C.cameraRatio(r, t, L, c, sens, true), worst: C.cameraRatio(r, t, L, c, sens),
+    zt: C.cameraDamageZone(t, L, c, sens, true), zw: C.cameraDamageZone(t, L, c, sens) }));
+  const onT = C.cameraOnTime(r, t, L, C.CAMERAS[1]);
+  $('cnote').textContent = 'Damage threshold ' + fmt(C.sensorThreshold(onT, sens) / 1e7, 2) + ' kW/cm² on the sensor for ' +
+    (L.scan ? fmtTime(onT).join(' ') + ' on the lens within ' + tt + ' (phone at ' + fmt(r) + ' m; counted as at least 0.25 s)' : tt);
+  const camPill = (typ, worst) => typ > 1 ? '<span class="pill critical">' + ICON.critical + 'Damage</span>'
+    : worst > 1 ? '<span class="pill warning">' + ICON.warning + 'Worst case</span>' : '<span class="pill good">' + ICON.good + 'Below</span>';
+  $('ctbl').innerHTML = '<thead><tr><th>Camera, lens wide open</th><th>At ' + fmt(r) + ' m, typical</th><th>Worst</th><th>Damage, typical</th><th>Worst case</th></tr></thead><tbody>' +
+    cams.map(({ c, typ, worst, zt, zw }) => '<tr><td>' + c.name + ' <span class="muted" title="Entrance pupil ' + fmt(c.f / c.F * 1000, 2) + ' mm">' + fmt(c.f * 1000, 2) + ' mm f/' + fmt(c.F) + '</span></td><td>' +
+      fmtRatio(typ) + '× ' + camPill(typ, worst) + '</td><td>' + fmtRatio(worst) + '×</td><td>' + camZone(zt) + '</td><td class="muted">' + camZone(zw) + '</td></tr>').join('') + '</tbody>';
+
   const rows = tableDistances(r).map(x => {
     const q = C.laserRatio(x, t, L), s = C.staticRatio(x, t, L), allowed = pTot / q.hr;
     const cell = allowed >= pFull * (1 - 1e-9) ? 'full power' : down(allowed * 1000) + ' mW (' + down(100 * allowed / pFull, 2) + ' %)';
@@ -1011,7 +1049,12 @@ function renderLaser(m) {
   });
   $('tbl').innerHTML = '<thead><tr><th>Distance</th><th>Beam Ø (1/e²)</th><th>W/m² (7 mm)</th><th>' + (L.scan ? 'Static' : 'Exposure') + '</th>' +
     (L.scan ? '<th>Scanned</th>' : '') + '<th>Allowed power</th></tr></thead><tbody>' + rows.join('') + '</tbody>';
-  $('report').value = reportLaser(r, t, L, res, nohd, nohdStatic);
+  $('report').value = reportLaser(r, t, L, res, nohd, nohdStatic, cams);
+}
+function camZone(z) {
+  if (z.far === 0) return 'none';
+  const far = fmtDist(z.far, 1).join(' ');
+  return z.near > 0 ? fmtDist(z.near, -1).join(' ') + ' to ' + far : 'up to ' + far;
 }
 
 function renderLight(m) {
@@ -1080,7 +1123,7 @@ function renderLight(m) {
 // ---------- text for a risk assessment ----------
 const today = () => new Date().toISOString().slice(0, 10);
 const device = () => preset ? preset.mfr + ' ' + preset.model : '[device, make and model]';
-function reportLaser(r, t, L, res, nohd, nohdStatic) {
+function reportLaser(r, t, L, res, nohd, nohdStatic, cams) {
   const tt = fmtTime(t).join(' '), pct = val('pct'), pTot = L.lines.reduce((s, l) => s + l.p, 0);
   const defName = { e2: '1/e²', e1: '1/e', fwhm: 'FWHM' };
   const colours = L.lines.map(l => fmt(l.p * 1000 * 100 / pct) + ' mW at ' + fmt(l.nm) + ' nm').join(', ');
@@ -1113,6 +1156,10 @@ function reportLaser(r, t, L, res, nohd, nohdStatic) {
     const fail = C.staticRatio(r, L.failT, L).hr;
     if (fail > 1) lines.push('Scan-fail safeguard required: a stopped beam reaches ' + fmtRatio(fail) + '× MPE within ' + fmt(L.failT * 1000) + ' ms.');
   }
+  const hit = cams.filter(x => x.zw.far > 0);
+  lines.push('Cameras pointed at the laser (estimate, ' + C.SENSORS[$('csens').value].name + ' sensor, lens wide open): ' + (hit.length
+    ? 'sensor damage ' + hit.map(x => x.c.name.toLowerCase() + ' ' + (x.zt.far > 0 ? camZone(x.zt) : 'none') + ' typical, ' + camZone(x.zw) + ' worst case').join('; ') + '.'
+    : 'no sensor damage expected for the lenses checked, even in the worst case.'));
   return lines.join('\n');
 }
 function reportLight(r, t, M, res, hd) {

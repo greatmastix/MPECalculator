@@ -12,6 +12,7 @@ Eye-safety calculator for **show lasers**, **high-power moving lights** and **pr
 - Power reduction (% of full, mW, optical density) or diverging lens (dioptres) needed at a given distance
 - Scanned patterns described the way Pangolin BEYOND builds them: scan rate (kpps), points per frame, pattern size, anchor points, repeats and grating beams. Every spot of the pattern (line crossings, line ends, beam dots) is checked against the single-pulse and average limits. Measured pulse widths can be entered instead.
 - What a stopped beam delivers within the scan-fail reaction time
+- Camera damage: how far a camera pointed straight at the laser can be damaged, as a typical estimate and a worst case (colour or monochrome CMOS, colour CCD)
 - Per-colour beams, diameter and divergence in 1/e², 1/e or FWHM, and a beam-profile choice (multimode diode, flat-top or Gaussian)
 
 **Moving lights** (IEC 62471:2006 / EN 62471 / EU 2006/25/EC, or IEC 62471-5:2015 / ICNIRP 2013)
@@ -22,12 +23,16 @@ Eye-safety calculator for **show lasers**, **high-power moving lights** and **pr
 
 **Projectors** (same standards as moving lights)
 - Hazard distance and risk group from ANSI lumens, throw ratio (zoom slider over the lens range) and native chip aspect ratio
-- Panasonic PT-RQ / PT-RZ presets with their lens lists; the colour temperature setting is taken into account
+- Panasonic PT-RQ / PT-RZ presets (including the PT-RQ45K) with their current lens lists; the colour temperature setting is taken into account, and so is the light loss of lenses that close down towards tele
 
 **All**
 - Dazzle distances (NODD) after Williamson & McLin (2018)
 - Presets with data-sheet values for common lasers, fixtures and projectors. Values a preset provides are greyed out; **Unlock** lets you replace them with measured values
 - A compact text of the results for a risk assessment
+
+## Privacy
+
+No cookies, no tracking, nothing loaded from other servers, nothing stored in the browser. Your settings live only in the page address after the `#`, which browsers never send to a server. GitHub Pages sees your IP address to deliver the page (see the [GitHub Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)).
 
 ## Using it
 

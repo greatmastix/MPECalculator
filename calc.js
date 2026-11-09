@@ -119,24 +119,25 @@
       0.5 * Math.sqrt(Math.max(0, (-s + R1 + R2) * (s + R1 - R2) * (s - R1 + R2) * (s + R1 + R2)));
   }
   // Fraction of a flat-top beam (an even disc of diameter dNear spread by an even angular disc that has grown
-  // to dFar) passing the centred 7 mm aperture. For any even profile shape, the equal-area round discs are the
+  // to dFar) passing a centred aperture (7 mm unless rAp, its radius, is given). For any even profile shape, the equal-area round discs are the
   // worst case (Riesz rearrangement), so this bounds square, rectangular and elliptical flat-top beams too.
-  function flatFrac(dNear, dFar) {
-    const R1 = Math.max(dNear, 1e-9) / 2, R2 = Math.max(dFar, 1e-9) / 2, top = Math.min(R_AP, R1 + R2);
+  function flatFrac(dNear, dFar, rAp) {
+    const R1 = Math.max(dNear, 1e-9) / 2, R2 = Math.max(dFar, 1e-9) / 2, top = Math.min(rAp || R_AP, R1 + R2);
     const n = 128, ds = top / n;
     let f = 0;
     for (let i = 0; i < n; i++) { const s = (i + 0.5) * ds; f += overlap(s, R1, R2) * 2 * Math.PI * s * ds; }
     return Math.min(1, f / (Math.PI * R1 * R1 * Math.PI * R2 * R2));
   }
-  // Fraction of the beam's power through the 7 mm aperture, by profile (b.profile):
+  // Fraction of the beam's power through the 7 mm aperture (or an aperture of diameter ap), by profile (b.profile):
   //  'gauss' single-mode Gaussian; 'flat' round flat-top, the worst case of any flat profile;
   //  'multimode' (default) a typical multimode diode beam, flat along the slow axis and near-Gaussian along the
   //  fast axis: halfway (geometric mean) between Gaussian and flat-top, which matches the 1.1-1.4× over Gaussian
   //  such beams give in a 7 mm aperture.
-  function apertureFraction(r, b) {
-    const g = -Math.expm1(-((AP / d63(r, b)) ** 2));
+  function apertureFraction(r, b, ap) {
+    ap = ap || AP;
+    const g = -Math.expm1(-((ap / d63(r, b)) ** 2));
     if (b.profile === 'gauss') return g;
-    const f = Math.max(g, flatFrac(b.fA * b.a * (1 + r * (b.dpt || 0)), b.fPhi * b.phi * r));
+    const f = Math.max(g, flatFrac(b.fA * b.a * (1 + r * (b.dpt || 0)), b.fPhi * b.phi * r, ap / 2));
     return b.profile === 'flat' ? f : Math.sqrt(g * f);
   }
   // Geometry for one colour: its own diameter/divergence if given, else the common one.
@@ -332,6 +333,92 @@
   // Nominal ocular dazzle distance: beyond it the beam no longer blocks that much of the view.
   function laserNODD(L, mde) { return solveFalling(r => visualIrradiance(r, L) / mde, 0.01, 1e7); }
 
+  // ---------- camera sensors (Ritt 2019, Sensors 19:3765 and 2023, Sensors 23:7033) ----------
+  // A camera lens focuses the beam to a spot of a few micrometres on the sensor, so a beam that is eye-safe can still
+  // burn pixels. Sensor damage thresholds (1-on-1, 532 nm, CW) measured by Schwarz et al. 2017 (Opt. Eng. 56:034108),
+  // kW/cm² at 1 s; colour sensors (colour filters, microlenses) are what phones and cameras have.
+  const SENSORS = {
+    cmos: { name: 'CMOS colour', e1: 56.7e7 },
+    cmosmono: { name: 'CMOS monochrome', e1: 73e7 },
+    ccd: { name: 'CCD colour', e1: 13e7 },
+  };
+  // Time dependence of the threshold, from the CMOS monochrome series (75 / 73 / 56 / 48 kW/cm² at 0.25 / 1 / 5 /
+  // 10 s), relative to 1 s. Not measured outside 0.25-10 s: shorter pulses get no credit, longer ones keep the 10 s value.
+  const LIDT_T = [[0.25, 75 / 73], [1, 1], [5, 56 / 73], [10, 48 / 73]];
+  function sensorThreshold(t, sensor) {
+    const s = SENSORS[sensor] || SENSORS.cmos, x = Math.log(Math.min(Math.max(t, 0.25), 10));
+    const tab = LIDT_T.map(([tt, k]) => [Math.log(tt), Math.log(k)]);
+    return s.e1 * Math.exp(interp(tab, x));
+  }
+  // Typical lenses, fully open (focal length f, F-number F; entrance pupil f / F). Stopping down helps: the
+  // sensor irradiance from a distant laser falls with about F⁴.
+  const CAMERAS = [
+    { name: 'Action camera', f: 0.0027, F: 2.5 },
+    { name: 'Phone, main camera', f: 0.0068, F: 1.8 },
+    { name: 'Phone, telephoto', f: 0.0155, F: 2.8 },
+    { name: 'Camera, standard lens', f: 0.05, F: 1.8 },
+    { name: 'Camera, telephoto lens', f: 0.2, F: 2.8 },
+  ];
+  const CAM_T = 0.9;                       // lens transmittance (Ritt's estimate for multi-element lenses)
+  // The typical estimate, beside Ritt's worst case. Real lenses wide open, focus errors and air turbulence spread
+  // the spot: blur = its width over the diffraction limit (an assumption; Westgate & James 2022 measured spots above
+  // theory and higher thresholds outdoors). A spot smaller than the colour-filter and oxide stack (h thick) loses
+  // heat sideways, so it needs more irradiance than the dRef spot (d63 of the 25.7 µm 1/e² spot of Schwarz et al.)
+  // the thresholds were measured with: threshold × (1 + h/d) / (1 + h/dRef), from heat flow, not measured. Larger
+  // spots keep the measured threshold, so the typical estimate never exceeds the worst case.
+  const CAM_TYP = { blur: 2, h: 3e-6, dRef: 25.7e-6 / Math.SQRT2 };
+  /* Peak irradiance on the sensor (W/m²) of a beam resting on the lens cam = { f, F } at range r, all colours
+   * landing on the same spot. Each colour: power through the entrance pupil, focused to the diffraction spot of a
+   * truncated Gaussian beam (Ritt's E0(ν), aberrations neglected: the worst case) widened by the image of the
+   * laser's own source (multimode beams; d63 of the waist seen from r, or the beam's excess divergence when the
+   * lens is focused at infinity, whichever is smaller). The widths add in quadrature (Gaussian convolution).
+   * typical: the spread spot, and each colour weighted by the small-spot heat credit (an effective irradiance to
+   * compare with the measured threshold). */
+  function sensorIrradiance(r, L, cam, typical) {
+    const D = cam.f / cam.F, blur2 = typical ? CAM_TYP.blur * CAM_TYP.blur : 1;
+    let e = 0;
+    for (const ln of L.lines) {
+      const g = lineGeom(L, ln), lam = ln.nm * 1e-9;
+      const nu2 = 2 * (d63(r, g) / D) ** 2;                  // ν = d86 / D
+      const dDiff2 = 8 * lam * lam * cam.F * cam.F * -Math.expm1(-2 / nu2) / (Math.PI * Math.PI * nu2 * Math.expm1(-1 / nu2) ** 2);
+      const div = Math.hypot(g.kA * g.a * (g.dpt || 0), g.kPhi * g.phi);   // far-field d63 divergence
+      const src = g.kA * g.a * g.kPhi * g.phi / div;         // d63 of the (virtual) waist, beam parameter product kept
+      const excess = Math.sqrt(Math.max(0, div * div - (2 * lam / (Math.PI * src)) ** 2));   // beyond diffraction
+      const geo = cam.f * Math.min(src / r, excess);
+      const d2 = dDiff2 * blur2 + geo * geo;
+      const credit = typical ? Math.min(1, (1 + CAM_TYP.h / CAM_TYP.dRef) / (1 + CAM_TYP.h / Math.sqrt(d2))) : 1;   // no penalty above dRef
+      e += CAM_T * ln.p * apertureFraction(r, g, D) / (Math.PI / 4 * d2) * credit;
+    }
+    return e;
+  }
+  // Seconds within t that the beam is on the lens. A scanned beam: the largest share of time any spot of the
+  // pattern spends on the entrance pupil (a crossing lasts longer on a pupil wider than 7 mm by about (d + D) /
+  // (d + 7 mm), d the beam width).
+  function cameraOnTime(r, t, L, cam) {
+    if (!L.scan) return t;
+    const D = cam.f / cam.F, data = lineData(r, L);
+    let duty = 0;
+    for (const sp of scanSpots(r, L, data)) sp.items.forEach((it, i) => {
+      const k = sp.name === 'line crossing' || sp.name === 'measured pulse' ? (data[i].d + D) / (data[i].d + AP) : 1;
+      duty = Math.max(duty, Math.min(1, sp.rate * it.teff * k + (it.extraDuty || 0)));
+    });
+    return t * duty;
+  }
+  // Sensor irradiance / damage threshold. A scanned beam paints the same spot on the sensor (the laser stays where
+  // it is in the picture) with the full peak on every pass, and the sensor heats up within microseconds, so the
+  // passes count like one exposure as long as their total time on the lens (at least 0.25 s, the shortest measured).
+  function cameraRatio(r, t, L, cam, sensor, typical) {
+    return sensorIrradiance(r, L, cam, typical) / sensorThreshold(cameraOnTime(r, t, L, cam), sensor);
+  }
+  // Range of distances where the sensor is damaged: { near, far } (near > 0.01 m when close up is safe again,
+  // because a beam narrower than the lens focuses to a larger spot); far = 0 means none.
+  function cameraDamageZone(t, L, cam, sensor, typical) {
+    const f = r => cameraRatio(r, t, L, cam, sensor, typical);
+    const far = lastAbove(f, 0.01, 1e6, 40);
+    if (far === 0) return { near: 0, far: 0 };
+    return { near: f(0.01) > 1 ? 0 : firstAbove(f, 0.01, far, [], 40), far };
+  }
+
   // ---------- spectral weightings ----------
   // CIE 1924 photopic V(lambda), 5 nm steps from 380 to 780 nm.
   const V_TAB = [3.9e-5, 6.4e-5, 1.2e-4, 2.17e-4, 3.96e-4, 6.4e-4, 1.21e-3, 2.18e-3, 4e-3, 7.3e-3, .0116, .01684, .023, .0298, .038, .048,
@@ -443,8 +530,9 @@
   }
   // Image projector: ANSI lumens spread over the image (throw ratio = distance / image width, aspect = width /
   // height), times the centre-to-average ratio of the image (PROJ.peak). With the lens aperture (focal length ÷
-  // F-number) as the source, this reproduces Panasonic's published IEC 62471-5 hazard distances (11 lens and
-  // projector combinations) within -21 % to +30 %, median about 1.0, with the centre equal to the average.
+  // F-number) as the source, this reproduces Panasonic's published IEC 62471-5 hazard distances (20 lens and
+  // projector combinations) within -23 % to +30 %, median about 1.05, with the centre equal to the average;
+  // the exception is the PT-RQ25K with the ET-D3LET80 / ET-D75LE8 (4.5 m published, about 10 m here).
   const PROJ = { peak: 1.0 };
   function projectorIntensity(lm, tr, aspect) {
     const h = Math.atan(1 / (2 * tr)), v = Math.atan(1 / (2 * tr * aspect));
@@ -564,6 +652,7 @@
     staticRatio, passLengths, scanSpots, laserRatio, laserNOHD, laserMaxTime, laserNeededLens, MDE, vLambda2008,
     visualIrradiance, laserNODD, vLambda, bLambda, r13, r97, blackBody, ENGINES, engine, intensityFromLux,
     intensityFromLumens, crossover, lightRatio, peakRange, lightHazardDistance, lightNODD, lightMaxTime, lightMaxDuty,
+    SENSORS, sensorThreshold, CAMERAS, CAM_TYP, sensorIrradiance, cameraOnTime, cameraRatio, cameraDamageZone,
     solveFalling, solveRising, lastAbove, firstAbove,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
